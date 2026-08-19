@@ -1,0 +1,7 @@
+.thumbnail
+*.thumbnail
+.DS_Store
+.icloud
+
+# Local-only for now
+CLAUDE.md
