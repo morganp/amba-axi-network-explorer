@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./ds-base.js"></script>
+<style>html,body{margin:0;padding:0;background:oklch(0.145 0.012 258)}*{box-sizing:border-box}a{color:oklch(0.78 0.14 235);text-decoration:none}a:hover{color:oklch(0.86 0.11 235)}::selection{background:oklch(0.78 0.14 235 / 0.30)}::-webkit-scrollbar{height:10px;width:10px}::-webkit-scrollbar-thumb{background:oklch(0.34 0.01 258);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:oklch(0.42 0.01 258)}::-webkit-scrollbar-track{background:transparent}</style>
+</helmet>
+<x-import component-from-global-scope="AMBADesignKit_f511ca.ExplorerShell" protocol="AXI" title="Network Explorer" crumbs="{{ crumbs }}" status-line="{{ statusLine }}" status-note="{{ statusNote }}" views="{{ views }}" active-view="{{ view }}" on-view="{{ onView }}" nav-note="Blocks are Arm CoreLink NIC-400 components. Signal names follow the AMBA AXI specification (IHI 0022)." clock="{{ clock }}" hint-size="100%,100vh">
+
+<sc-if value="{{ isNetwork }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.22em;color:oklch(0.78 0.14 235)">NETWORK · AXI4</div>
+<div style="font-size:40px;font-weight:700;letter-spacing:-.022em;margin:16px 0 20px;text-wrap:pretty">{{ levelTitle }}</div>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:0">AXI4 splits one transfer across five independent channels — <strong style="color:oklch(0.80 0.15 35)">AW</strong> carries a write address out and <strong style="color:oklch(0.85 0.15 90)">W</strong> its data, <strong style="color:oklch(0.80 0.15 155)">B</strong> returns the one write response, <strong style="color:oklch(0.78 0.14 235)">AR</strong> carries a read address out and <strong style="color:oklch(0.72 0.17 305)">R</strong> brings the data back. Every channel is the same VALID/READY handshake: the source asserts VALID, the destination asserts READY, and the transfer happens on the rising edge where both are high.</p>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:16px 0 0">A manager is never wired to a subordinate directly. The <strong style="color:oklch(0.93 0.005 258)">interconnect</strong> is the block in between, and it exists because address ownership has to be resolved somewhere: it holds the address map, works out which subordinate a transfer belongs to, and joins the two sets of channels together for as long as that transfer lasts. To the CPU it looks like one subordinate covering the whole address space; to SRAM0 it looks like one manager.</p>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:16px 0 0">This network is <strong style="color:oklch(0.93 0.005 258)">mux-based, not packet-switched</strong>. A NIC-400 does not wrap a transfer in a header and forward it hop by hop — it is a crossbar of dedicated per-channel wires with an address decoder and an arbiter in front of each port. A channel that is not selected simply sits idle.</p>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:16px 0 0">Every block is clickable. Press <strong style="color:oklch(0.93 0.005 258)">READ</strong> or <strong style="color:oklch(0.93 0.005 258)">WRITE</strong> on the CPU, pick a target address, then press <strong style="color:oklch(0.93 0.005 258)">1 CLK</strong> to advance the model one cycle. <strong style="color:oklch(0.85 0.15 90)">Amber</strong> on a wire is VALID high with READY low — a wait cycle. Grey wires are idle and never move.</p>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;max-width:1000px">
+<div style="padding:16px 18px 17px;background:oklch(0.155 0.012 258);border:1px solid oklch(0.26 0.011 258);border-top:2px solid oklch(0.78 0.14 235);border-radius:12px">
+<div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.78 0.14 235);margin-bottom:9px">1 · DECODE</div>
+<div style="font-size:14px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty">It reads AWADDR or ARADDR and works out which subordinate owns that address. The map is fixed when the NIC-400 is configured — nothing is learned or routed at run time.</div>
+</div>
+<div style="padding:16px 18px 17px;background:oklch(0.155 0.012 258);border:1px solid oklch(0.26 0.011 258);border-top:2px solid oklch(0.78 0.14 235);border-radius:12px">
+<div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.78 0.14 235);margin-bottom:9px">2 · CONNECT</div>
+<div style="font-size:14px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty">It muxes each of the manager's five channels onto the matching channel of that subordinate, one channel at a time, and arbitrates when two managers want the same port.</div>
+</div>
+<div style="padding:16px 18px 17px;background:oklch(0.155 0.012 258);border:1px solid oklch(0.26 0.011 258);border-top:2px solid oklch(0.78 0.14 235);border-radius:12px">
+<div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.78 0.14 235);margin-bottom:9px">3 · ANSWER</div>
+<div style="font-size:14px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty">It guarantees a response. B or R comes back for every transfer the manager issues — <span style="color:oklch(0.72 0.17 25)">DECERR</span> when no region matched, because a manager cannot withdraw a transfer and must never be left waiting.</div>
+</div>
+</div>
+
+<div style="margin-top:34px">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.LevelLadder" levels="{{ levels }}" active="{{ level }}" on-pick="{{ onLevel }}" accent="oklch(0.78 0.14 235)" hint-size="100%,90px"></x-import>
+</div>
+<div style="margin-top:18px">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.NoteCard" label="{{ levelLabel }}" accent="{{ levelAccent }}" hint-size="100%,90px">{{ levelNote }}</x-import>
+</div>
+<sc-if value="{{ isPlanned }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:14px;max-width:900px;padding:13.5px 22px;border:1px solid color-mix(in oklch, oklch(0.85 0.15 90) 34%, transparent);background:color-mix(in oklch, oklch(0.85 0.15 90) 8%, oklch(0.155 0.012 258));border-radius:11px;font:400 12px/1.7 'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">{{ plannedNote }}</div>
+</sc-if>
+
+<div style="margin-top:34px;padding:22px 22px 20px;background:oklch(0.128 0.011 258);border:1px solid oklch(0.26 0.011 258);border-radius:14px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.22em;color:oklch(0.48 0.01 258)">{{ topoLabel }}</div>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">{{ phaseLine }}</div>
+</div>
+<div style="overflow-x:auto;overflow-y:hidden;margin:20px 0 0">
+<div style="position:relative;width:{{ cw }}px;height:{{ ch }}px">
+<svg width="{{ cw }}" height="{{ ch }}" style="position:absolute;left:0;top:0">
+<defs>
+<marker id="arw-aw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.80 0.15 35)"></path></marker>
+<marker id="arw-w" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.85 0.15 90)"></path></marker>
+<marker id="arw-b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.80 0.15 155)"></path></marker>
+<marker id="arw-ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.78 0.14 235)"></path></marker>
+<marker id="arw-r" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.72 0.17 305)"></path></marker>
+<marker id="arw-stall" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.85 0.15 90)"></path></marker>
+<marker id="arw-err" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.72 0.17 25)"></path></marker>
+<marker id="arw-idle" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="oklch(0.34 0.01 258)"></path></marker>
+</defs>
+<sc-for list="{{ outEdges }}" as="e" hint-placeholder-count="6">
+<path d="{{ e.d }}" fill="none" stroke="{{ e.stroke }}" stroke-width="{{ e.sw }}" stroke-dasharray="{{ e.dash }}" marker-end="{{ e.marker }}" style="animation:flowF .9s linear infinite"></path>
+</sc-for>
+<sc-for list="{{ backEdges }}" as="e" hint-placeholder-count="4">
+<path d="{{ e.d }}" fill="none" stroke="{{ e.stroke }}" stroke-width="{{ e.sw }}" stroke-dasharray="{{ e.dash }}" marker-end="{{ e.marker }}" style="animation:flowB .9s linear infinite"></path>
+</sc-for>
+<sc-for list="{{ pads }}" as="p" hint-placeholder-count="10">
+<rect x="{{ p.x }}" y="{{ p.y }}" width="5" height="6" rx="1" fill="{{ p.fill }}"></rect>
+</sc-for>
+</svg>
+<sc-for list="{{ edgeLabels }}" as="t" hint-placeholder-count="10">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.EdgeLabel" label="{{ t.label }}" x="{{ t.x }}" y="{{ t.y }}" color="{{ t.color }}" bg="oklch(0.128 0.011 258)" hint-size="0,0"></x-import>
+</sc-for>
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="3">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.BlockNode" label="{{ n.label }}" range-color="{{ n.rangeColor }}" sub="{{ n.sub }}" range="{{ n.range }}" accent="{{ n.accent }}" selected="{{ n.selected }}" state="{{ n.state }}" state-color="{{ n.stateColor }}" controls="{{ n.controls }}" on-click="{{ n.onClick }}" width="{{ n.width }}" height="{{ n.height }}" x="{{ n.x }}" y="{{ n.y }}" hint-size="186px,120px"></x-import>
+</sc-for>
+</div>
+</div>
+<div style="margin-top:16px;font:400 11.5px/1.7 'JetBrains Mono',monospace;color:oklch(0.56 0.01 258);max-width:900px;text-wrap:pretty">{{ canvasNote }}</div>
+<sc-if value="{{ canvasNote2 }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:10px;font:400 11.5px/1.7 'JetBrains Mono',monospace;color:oklch(0.56 0.01 258);max-width:900px;text-wrap:pretty">{{ canvasNote2 }}</div>
+</sc-if>
+<div style="margin-top:22px;padding-top:18px;border-top:1px solid oklch(0.26 0.011 258)">
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.22em;color:oklch(0.48 0.01 258);margin-bottom:14px">NAMES ON THIS CANVAS</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:11px 26px">
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">NIC-400</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">CoreLink Network Interconnect — the configurable AXI crossbar between managers and subordinates.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">ASIB</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">AXI <strong style="color:oklch(0.86 0.005 258);font-weight:600">S</strong>lave <strong style="color:oklch(0.86 0.005 258);font-weight:600">I</strong>nterface <strong style="color:oklch(0.86 0.005 258);font-weight:600">B</strong>lock — the interconnect port a manager plugs into. The block name keeps the older word; the role is the subordinate end of that link, answering READY to the CPU. One per manager.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">AMIB</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">AXI <strong style="color:oklch(0.86 0.005 258);font-weight:600">M</strong>aster <strong style="color:oklch(0.86 0.005 258);font-weight:600">I</strong>nterface <strong style="color:oklch(0.86 0.005 258);font-weight:600">B</strong>lock — the interconnect port that drives a subordinate. Its role is the manager end of that link: it asserts VALID and waits for READY. One per subordinate port.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">splitter</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">The decode and fan-out stage inside the NIC-400. Combinational address matching — no table, no header, no store-and-forward.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">default<br />subordinate</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">The responder that answers an address no region matched, so the manager always gets a response. The NIC-400 TRM calls it the default slave.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">manager<br />subordinate</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">AXI4 names for the two ends of a link — the side that issues transfers and the side that answers. Documents before AMBA AXI issue H say master and slave, which is why ASIB and AMIB keep those letters.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">arbiter</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">The selection stage in front of a subordinate-facing port. Two managers requesting it in one cycle get one grant; the grant covers a whole transfer, so nothing is interleaved. Drawn at L3.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">AxQOS</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">AWQOS and ARQOS — a four-bit priority hint the manager issues with the address. An arbiter set to QoS priority grants the higher value first; one set to round-robin ignores it.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">burst · beat</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">A burst is one transaction; a beat is one data transfer inside it. One address transfer describes the whole burst, and AxLEN + 1 beats follow on the data channel.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">AxID · RID</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">AWID and ARID tag a transaction; RID and BID come back on the response so you can tell which one finished. Same ID must stay in order, different IDs need not.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">OKAY</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">BRESP or RRESP = 0b00. The transfer completed normally.</span></div>
+<div style="display:flex;gap:12px;align-items:baseline"><span style="flex:none;width:104px;font:600 11.5px/1.5 'JetBrains Mono',monospace;color:oklch(0.72 0.17 25)">DECERR</span><span style="font-size:13px;line-height:1.55;color:oklch(0.66 0.008 258);text-wrap:pretty">Decode error, BRESP or RRESP = 0b11. No region owns the address; the interconnect answers instead of a subordinate.</span></div>
+</div>
+</div>
+</div>
+
+<div style="margin-top:34px">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.InspectorCard" name="{{ selName }}" sub="{{ selSub }}" accent="oklch(0.78 0.14 235)" prose="{{ selProse }}" rules="{{ selRules }}" ports="{{ selPorts }}" hint-size="100%,240px"></x-import>
+</div>
+
+<div style="display:flex;gap:20px;margin-top:34px;align-items:flex-start;flex-wrap:wrap">
+<div style="width:392px;flex:none;padding:22px;border:1px solid oklch(0.26 0.011 258);border-radius:12px;background:oklch(0.155 0.012 258)">
+<sc-if value="{{ hasFlight }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="margin-bottom:17px;padding:14px 15.5px 15px;background:oklch(0.155 0.012 258);border:1px solid oklch(0.26 0.011 258);border-left:2px solid oklch(0.85 0.15 90);border-radius:0 11px 11px 0">
+<div style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.85 0.15 90);margin-bottom:9px">WHY A TRANSACTION NEEDS A TAG</div>
+<div style="font-size:13.5px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty">Until now the manager had one transaction outstanding, so a returning response could only belong to it — order alone identified it. Two at once breaks that, because <strong style="color:oklch(0.93 0.005 258)">B and R carry no address</strong>: neither channel has a field saying which transfer it answers.</div>
+<div style="font-size:13.5px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty;margin-top:9px">So the address channel carries a tag — <span style="font-family:'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">AWID</span> / <span style="font-family:'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">ARID</span> — and every response quotes it back as <span style="font-family:'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">BID</span> / <span style="font-family:'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">RID</span>. The tag is the only thing tying an answer to its question, which is what lets responses arrive in any order.</div>
+<div style="font-size:13.5px;line-height:1.6;color:oklch(0.72 0.008 258);text-wrap:pretty;margin-top:9px">The tag is payload on the address channel, so it travels the whole path and is visible on every hop. <strong style="color:oklch(0.93 0.005 258)">ASIB0 does not keep it</strong> — it records which IDs are outstanding so it knows where to send a response, then forwards <span style="font-family:'JetBrains Mono',monospace;color:oklch(0.85 0.15 90)">AxID</span> onward unchanged. The subordinate is what quotes it back.</div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<div style="flex:1;padding:7px 9px;border-radius:6px;background:color-mix(in oklch, oklch(0.84 0.15 122) 14%, transparent);border:1px solid color-mix(in oklch, oklch(0.84 0.15 122) 38%, transparent);font:600 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.84 0.15 122)">ID0 → SRAM0</div>
+<div style="flex:1;padding:7px 9px;border-radius:6px;background:color-mix(in oklch, oklch(0.80 0.16 357) 14%, transparent);border:1px solid color-mix(in oklch, oklch(0.80 0.16 357) 38%, transparent);font:600 10.5px/1.4 'JetBrains Mono',monospace;color:oklch(0.80 0.16 357)">ID1 → SRAM1</div>
+</div>
+</div>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.48 0.01 258);margin-bottom:10px">IN FLIGHT · TWO TRANSACTIONS</div>
+<sc-for list="{{ flightRows }}" as="f" hint-placeholder-count="2">
+<div style="padding:12px 13px;margin-bottom:7px;border-radius:6px;background:oklch(0.20 0.011 258);border:1px solid {{ f.border }}">
+<div style="display:flex;align-items:baseline;gap:11px;flex-wrap:wrap">
+<span style="font:700 12px/1 'JetBrains Mono',monospace;color:{{ f.idColor }}">{{ f.id }}</span>
+<span style="font:400 11px/1 'JetBrains Mono',monospace;color:oklch(0.62 0.01 258)">{{ f.addr }}</span>
+</div>
+<div style="font:400 10px/1.5 'JetBrains Mono',monospace;color:oklch(0.48 0.01 258);margin-top:5px">{{ f.len }}</div>
+<div style="font:500 11.5px/1.5 'JetBrains Mono',monospace;color:{{ f.color }};margin-top:7px">{{ f.state }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ showRegs }}" hint-placeholder-val="{{ true }}">
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.48 0.01 258);margin-bottom:10px">TARGET ADDRESS · click to target</div>
+</sc-if>
+<sc-if value="{{ hasWho }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<sc-for list="{{ whoChips }}" as="c" hint-placeholder-count="2">
+<div onClick="{{ c.onClick }}" style="flex:1;cursor:pointer;padding:9px 11px;border-radius:6px;background:{{ c.bg }};border:1px solid {{ c.border }}">
+<div style="font:400 9.5px/1.4 'JetBrains Mono',monospace;letter-spacing:.12em;color:oklch(0.48 0.01 258)">{{ c.label }}</div>
+<div style="font:500 12px/1.5 'JetBrains Mono',monospace;color:{{ c.color }}">{{ c.addr }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ showRegs }}" hint-placeholder-val="{{ true }}">
+<div>
+<sc-for list="{{ regRows }}" as="r" hint-placeholder-count="3">
+<div onClick="{{ r.onClick }}" style="display:flex;align-items:center;gap:14px;padding:9px 11px;margin-bottom:5px;border-radius:6px;cursor:pointer;background:{{ r.bg }};border:1px solid {{ r.border }}">
+<div style="width:96px;flex:none;font:400 11px/1 'JetBrains Mono',monospace;color:oklch(0.62 0.01 258)">{{ r.addr }}</div>
+<div style="flex:1;font:500 12px/1.4 'JetBrains Mono',monospace;color:oklch(0.9 0.005 258)">{{ r.dev }}<br />{{ r.loc }}</div>
+<div style="font:400 10px/1 'JetBrains Mono',monospace;color:oklch(0.48 0.01 258)">{{ r.access }}</div>
+<div style="font:400 12px/1 'JetBrains Mono',monospace;color:{{ r.valueColor }}">{{ r.value }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="margin-top:20px;padding-top:18px;border-top:1px solid oklch(0.26 0.011 258)">
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.48 0.01 258);margin-bottom:10px">DECODE</div>
+<div style="font:400 12px/1.75 'JetBrains Mono',monospace;color:oklch(0.72 0.15 300);text-wrap:pretty">{{ decodeText }}</div>
+</div>
+</div>
+<div style="flex:1;min-width:340px">
+<x-import component-from-global-scope="AMBADesignKit_f511ca.TraceLog" entries="{{ trace }}" label="TRACE" max="{{ 7 }}" hint-size="100%,220px"></x-import>
+</div>
+</div>
+
+<sc-if value="{{ showWave }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:34px">
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.2em;color:oklch(0.48 0.01 258);margin-bottom:14px">WAVEFORM · {{ waveScope }} · {{ waveRev }}</div>
+<div style="border:1px solid oklch(0.26 0.011 258);border-radius:12px;background:oklch(0.155 0.012 258);padding:18px 0 14px;overflow-x:auto">
+<div style="display:flex;padding:0 18px 10px">
+<div style="width:152px;flex:none"></div>
+<sc-for list="{{ waveHdr }}" as="h" hint-placeholder-count="6">
+<div style="width:92px;flex:none;font:400 10px/1 'JetBrains Mono',monospace;color:{{ h.color }}">{{ h.label }}</div>
+</sc-for>
+</div>
+<sc-for list="{{ waveRows }}" as="row" hint-placeholder-count="12">
+<div style="display:flex;align-items:center;padding:0 18px;height:34px">
+<div style="width:152px;flex:none;font:400 11px/1 'JetBrains Mono',monospace;color:{{ row.color }};white-space:nowrap;overflow:hidden">{{ row.name }}</div>
+<div style="position:relative;height:26px;flex:none;width:{{ row.w }}px">
+<svg width="{{ row.w }}" height="26" style="position:absolute;left:0;top:0;display:block">
+<sc-for list="{{ row.paths }}" as="p" hint-placeholder-count="1">
+<path d="{{ p.d }}" fill="{{ p.fill }}" stroke="{{ p.stroke }}" stroke-width="1.5" stroke-dasharray="{{ p.dash }}" stroke-linejoin="round"></path>
+</sc-for>
+</svg>
+<sc-for list="{{ row.texts }}" as="tx" hint-placeholder-count="1">
+<div style="position:absolute;top:7px;text-align:center;font:400 9px/1 'JetBrains Mono',monospace;left:{{ tx.l }}px;width:{{ tx.w }}px;color:{{ tx.fill }}">{{ tx.v }}</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReference }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.22em;color:oklch(0.72 0.15 300)">REFERENCE</div>
+<div style="font-size:40px;font-weight:700;letter-spacing:-.022em;margin:16px 0 20px;text-wrap:pretty">Channels, handshakes and NIC-400 parts</div>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:0">Only the signals the model drives at L1 and L2 are listed. Burst, ID and QoS signals appear as the levels that use them are built.</p>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.48 0.01 258);margin:34px 0 14px">AXI4 CHANNEL SIGNALS</div>
+<x-import component-from-global-scope="AMBADesignKit_f511ca.ReferenceTable" rows="{{ refSignals }}" name-width="{{ 190 }}" hint-size="100%,420px"></x-import>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.16em;color:oklch(0.48 0.01 258);margin:34px 0 14px">NIC-400 / NIC-450 BUILDING BLOCKS</div>
+<x-import component-from-global-scope="AMBADesignKit_f511ca.ReferenceTable" rows="{{ refBlocks }}" name-width="{{ 190 }}" hint-size="100%,320px"></x-import>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRoadmap }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font:400 11px/1 'JetBrains Mono',monospace;letter-spacing:.22em;color:oklch(0.85 0.15 90)">ROADMAP</div>
+<div style="font-size:40px;font-weight:700;letter-spacing:-.022em;margin:16px 0 20px;text-wrap:pretty">Five levels, each adding one idea</div>
+<p style="font-size:17px;line-height:1.65;color:oklch(0.72 0.008 258);max-width:76ch;text-wrap:pretty;margin:0">L1 through L4 are built and run. The rest are planned in the order below: each level keeps the previous picture and adds exactly one concept, so nothing on screen is ever unexplained.</p>
+<div style="display:flex;flex-direction:column;gap:18px;margin-top:34px;max-width:900px">
+<sc-for list="{{ roadmap }}" as="r" hint-placeholder-count="5">
+<div style="background:oklch(0.175 0.013 258);border:1px solid oklch(0.28 0.012 258);border-top:2px solid oklch(0.78 0.14 235);border-radius:12px;padding:20px 22px">
+<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+<span style="font:700 16px/1 'JetBrains Mono',monospace;color:oklch(0.78 0.14 235)">{{ r.id }}</span>
+<span style="font-size:19px;font-weight:600;letter-spacing:-.01em;color:oklch(0.93 0.005 258)">{{ r.title }}</span>
+<span style="font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.14em;padding:5px 8px;border-radius:20px;border:1px solid oklch(0.3 0.012 258);color:{{ r.statusColor }}">{{ r.status }}</span>
+</div>
+<p style="font-size:14.5px;line-height:1.6;color:oklch(0.72 0.008 258);margin:12px 0 16px;text-wrap:pretty">{{ r.what }}</p>
+<div style="display:flex;flex-direction:column;gap:7px">
+<sc-for list="{{ r.bullets }}" as="b" hint-placeholder-count="3">
+<div style="display:flex;gap:10px;align-items:baseline">
+<span style="font:400 10px/1.6 'JetBrains Mono',monospace;letter-spacing:.1em;color:oklch(0.48 0.01 258);width:78px;flex:none">{{ b.k }}</span>
+<span style="font:400 12px/1.65 'JetBrains Mono',monospace;color:oklch(0.68 0.008 258);text-wrap:pretty">{{ b.v }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000},&quot;startMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;READ&quot;,&quot;WRITE&quot;],&quot;default&quot;:&quot;READ&quot;,&quot;tsType&quot;:&quot;'READ'|'WRITE'&quot;,&quot;section&quot;:&quot;Explorer&quot;},&quot;showWaveform&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Explorer&quot;}}">
+const AXI = 'oklch(0.78 0.14 235)';
+const C_AW = 'oklch(0.80 0.15 35)';
+const C_W = 'oklch(0.85 0.15 90)';
+const C_B = 'oklch(0.80 0.15 155)';
+const C_AR = 'oklch(0.78 0.14 235)';
+const C_R = 'oklch(0.72 0.17 305)';
+const AMBER = 'oklch(0.85 0.15 90)';
+const GREY = 'oklch(0.34 0.01 258)';
+const DIM = 'oklch(0.5 0.01 258)';
+const VIOLET = 'oklch(0.72 0.15 300)';
+const RED = 'oklch(0.72 0.17 25)';
+/* ID tag tints. Wire colour always means channel, so an ID never recolours a wire —
+   these are for ID badges, ledger rows and block state only.
+   Hues 122 and 357 are checked clear of BOTH assignment lists — interfaces (AXI 235,
+   ACE 195, LPI 155, APB 70, Issue L 165, P-Channel 300) and channels (AW 35, W 90,
+   B 155, AR 235, R 305, AC 195, CR 330, CD 275) — plus this page's DECERR red 25.
+   The assignment is permanent: do not repick without re-checking both lists. */
+const ID0 = 'oklch(0.84 0.15 122)';
+const ID1 = 'oklch(0.80 0.16 357)';
+const idC = (id) => (id === 0 ? ID0 : ID1);
+
+/* Canvas geometry: three blocks, two spans, five channel rows. */
+const CPU_R = 186, NIC_L = 360, NIC_R = 576, SRAM_L = 750;
+const CHANS = [
+  { id: 'aw', name: 'AW', y: 48, color: C_AW, dir: 'out' },
+  { id: 'w', name: 'W', y: 82, color: C_W, dir: 'out' },
+  { id: 'b', name: 'B', y: 116, color: C_B, dir: 'back' },
+  { id: 'ar', name: 'AR', y: 150, color: C_AR, dir: 'out' },
+  { id: 'r', name: 'R', y: 184, color: C_R, dir: 'back' },
+];
+const BLK_Y = 24, BLK_H = 184;
+
+/* L2 canvas: the NIC-400 opened up. Trunk wires at y 216 (out) / 234 (back); each branch
+   carries its bundle at the branch centre ± 9. Every terminal is a pad on a block edge. */
+const G2 = {
+  w: 1284, h: 580,
+  cpu: { x: 0, y: 227, w: 186, h: 146 },
+  asib: { x: 320, y: 227, w: 150, h: 146 },
+  spl: { x: 604, y: 20, w: 176, h: 540 },
+  amib0: { x: 848, y: 32, w: 132, h: 120 },
+  amib1: { x: 848, y: 240, w: 132, h: 120 },
+  dslv: { x: 848, y: 432, w: 132, h: 120 },
+  sram0: { x: 1060, y: 28, w: 190, h: 128 },
+  sram1: { x: 1060, y: 236, w: 190, h: 128 },
+  cy: [92, 300, 492],
+  trunk: 300,
+  off: { aw: -48, w: -24, b: 0, ar: 24, r: 48 },
+};
+
+/* L3 canvas: two managers into the same crossbar. Each manager keeps its own ASIB and
+   splitter; the three destinations each own an arbiter. Channels are bundled to one wire
+   per direction at this level — the five-wire picture is L1 and L2. */
+const G3 = {
+  w: 1244, h: 610,
+  cpu: { x: 0, y: 40, w: 186, h: 140 },
+  dma: { x: 0, y: 400, w: 186, h: 140 },
+  asib0: { x: 250, y: 45, w: 140, h: 130 },
+  asib1: { x: 250, y: 405, w: 140, h: 130 },
+  spl0: { x: 452, y: 45, w: 120, h: 130 },
+  spl1: { x: 452, y: 405, w: 120, h: 130 },
+  amib0: { x: 790, y: 25, w: 140, h: 150 },
+  amib1: { x: 790, y: 220, w: 140, h: 150 },
+  dslv: { x: 790, y: 415, w: 140, h: 150 },
+  sram0: { x: 1000, y: 35, w: 180, h: 130 },
+  sram1: { x: 1000, y: 230, w: 180, h: 130 },
+  mcy: [110, 470], dcy: [100, 295, 490], lane: 592, step: 13,
+};
+
+/* L4 canvas: the L2 topology again, one manager, but two transactions in flight. Bundled
+   wires as at L3, straight fan lines as at L2. */
+const G4 = {
+  w: 1444, h: 630,
+  cpu: { x: 0, y: 212, w: 186, h: 176 },
+  asib: { x: 320, y: 227, w: 150, h: 146 },
+  spl: { x: 604, y: 20, w: 176, h: 570 },
+  amib0: { x: 848, y: 32, w: 132, h: 130 },
+  amib1: { x: 848, y: 240, w: 132, h: 130 },
+  dslv: { x: 848, y: 430, w: 132, h: 150 },
+  /* 210px of clear span between AMIB and SRAM: the beat labels here carry RID and RLAST
+     in full, and they are the point of this level. Do not narrow it. */
+  sram0: { x: 1220, y: 28, w: 190, h: 140 },
+  sram1: { x: 1220, y: 236, w: 190, h: 140 },
+  dcy: [92, 300, 490], trunk: 300,
+};
+
+const LEVELS = [
+  { id: 'L1', name: 'One manager, one subordinate' },
+  { id: 'L2', name: 'Inside the NIC-400' },
+  { id: 'L3', name: 'Two managers, one mux' },
+  { id: 'L4', name: 'Bursts and IDs' },
+  { id: 'L5', name: 'NIC-450 conversions' },
+];
+
+const TITLES = {
+  L1: 'One manager, one subordinate, five channels',
+  L2: 'Inside the NIC-400: ASIB, AMIB, decode',
+  L3: 'Two managers arbitrating for one port',
+  L4: 'Bursts, IDs and out-of-order returns',
+  L5: 'NIC-450: slices, width and clock crossings',
+};
+
+const NOTES = {
+  L1: 'One AXI4 manager, one subordinate, one hop through a NIC-400. Every channel is a VALID/READY handshake and each carries a single beat, so the only thing to watch is who is driving VALID and who is holding READY low.',
+  L2: 'The interconnect opens up: the ASIB (AXI Slave Interface Block — the interconnect port a manager connects to) that terminates the manager, the address decoder, the nic400-splitter fanning one manager to two AMIBs (AXI Master Interface Blocks — the ports that drive the subordinates), and the default subordinate that answers an unmapped address with DECERR.',
+  L3: 'A second manager, a DMA-330, gets its own ASIB and its own splitter, and every destination gains an arbiter. When both managers decode to the same destination one is granted and the other holds its VALID for a cycle \u2014 the grant covers a whole transfer, never half of one. Channels are bundled to one wire per direction here; the waveform still separates them.',
+  L4: 'One manager again, but two transactions in flight at once. One address transfer now describes a whole burst \u2014 AxLEN beats, AxSIZE bytes each, AxBURST = INCR \u2014 and each transaction carries an AxID that comes back on RID or BID. Read beats of different IDs may interleave; AXI4 write data may not, because there is no WID.',
+  L5: 'Planned. NIC-450 adds register slices for timing closure, upsizers and downsizers between data widths, and asynchronous bridges between clock domains — each one changing latency without changing the protocol.',
+};
+
+const ROADMAP = [
+  {
+    id: 'L1', title: 'One manager, one subordinate', status: 'BUILT', statusColor: 'oklch(0.80 0.15 155)',
+    what: 'The smallest arrangement that still teaches AXI: a CPU, a NIC-400 with one manager-facing port and one subordinate-facing port, and an SRAM subordinate. A read is AR then R; a write is AW plus one W beat then B.',
+    bullets: [
+      { k: 'BLOCKS', v: 'CPU · NIC-400 (1 ASIB, 1 AMIB) · SRAM0' },
+      { k: 'SIGNALS', v: 'AWVALID/AWREADY, AWADDR, WDATA/WLAST, BRESP, ARVALID/ARREADY, ARADDR, RDATA/RLAST/RRESP' },
+      { k: 'CONTROLS', v: 'READ / WRITE on the CPU, STALL 1 CLK on the subordinate, target address including one unmapped address' },
+      { k: 'TEACHES', v: 'Five independent channels; VALID may not be withdrawn; READY low is the only backpressure; every transfer is answered, an unmapped address with DECERR' },
+    ],
+  },
+  {
+    id: 'L2', title: 'Inside the NIC-400', status: 'BUILT', statusColor: 'oklch(0.80 0.15 155)',
+    what: 'Replace the single NIC-400 box with its real parts and give it a second subordinate, so address decode has something to decide. An unmapped address is answered by the default subordinate with DECERR, which is the first response that is not OKAY.',
+    bullets: [
+      { k: 'ADDS', v: 'ASIB0 · address decoder · nic400-splitter · AMIB0, AMIB1 · default subordinate' },
+      { k: 'SIGNALS', v: 'BRESP / RRESP = DECERR, per-AMIB region base and size, decode match' },
+      { k: 'CONTROLS', v: 'Target SRAM0, SRAM1 or the unmapped address; READ / WRITE; STALL 1 CLK on whichever subordinate is addressed' },
+      { k: 'TEACHES', v: 'Decode is combinational address matching, not a routing table; the splitter is one manager fanning to several AMIBs, still by mux' },
+    ],
+  },
+  {
+    id: 'L3', title: 'Two managers, one mux', status: 'BUILT', statusColor: 'oklch(0.80 0.15 155)',
+    what: 'A second manager (a DMA-330) contends for the same subordinate. This is where mux-based interconnect differs most visibly from a packet network: the arbiter grants a whole channel for a whole transfer rather than interleaving packets.',
+    bullets: [
+      { k: 'ADDS', v: 'DMA-330 manager · ASIB1 · its own splitter · an arbiter on every destination' },
+      { k: 'SIGNALS', v: 'AWQOS / ARQOS, per-ASIB grant, VALID held while ungranted' },
+      { k: 'CONTROLS', v: 'A target per manager; READ / WRITE per manager; AxQOS 4 or 12; an arbitration-policy toggle on any destination card' },
+      { k: 'TEACHES', v: 'Arbitration and head-of-line blocking; AXI4 removed WID, so write data from two managers may never interleave' },
+    ],
+  },
+  {
+    id: 'L4', title: 'Bursts and IDs', status: 'BUILT', statusColor: 'oklch(0.80 0.15 155)',
+    what: 'Turn single beats into bursts and let more than one transaction be outstanding. Two reads with different ARIDs may return in either order, and the interconnect must keep same-ID traffic in order.',
+    bullets: [
+      { k: 'ADDS', v: 'Two transactions in flight · burst beat counters · an in-flight table on the ASIB' },
+      { k: 'SIGNALS', v: 'AWLEN / ARLEN, AWSIZE, AWBURST = INCR, AWID / ARID, RID, BID, RLAST, WLAST' },
+      { k: 'CONTROLS', v: 'Swap the two burst lengths; READ / WRITE; interleave RID, or return BID out of order' },
+      { k: 'TEACHES', v: 'RLAST closes a burst; same-ID must stay ordered; different IDs need not' },
+    ],
+  },
+  {
+    id: 'L5', title: 'NIC-450 conversions', status: 'PLANNED', statusColor: AMBER,
+    what: 'What a real SoC interconnect adds between the ports: register slices, data-width conversion and clock-domain crossing. None of it changes the protocol, all of it changes the timing you see on the waveform.',
+    bullets: [
+      { k: 'ADDS', v: 'Register slice · upsizer / downsizer · asynchronous bridge · NIC-450 topology' },
+      { k: 'SIGNALS', v: 'Second ACLK domain, WSTRB packing across widths' },
+      { k: 'CONTROLS', v: 'Insert or remove slices; set 32/64/128-bit ports; set the clock ratio' },
+      { k: 'TEACHES', v: 'Latency is a build-time choice; a downsizer turns one beat into several without a new transaction' },
+    ],
+  },
+];
+
+const REGS = [
+  { id: 'a0', addr: '0x8000_0000', dev: 'SRAM0', loc: 'line 0', name: 'SRAM0 · line 0', access: 'RW', value: '0x1F00_2A40' },
+  { id: 'a1', addr: '0x8000_0040', dev: 'SRAM0', loc: 'line 1', name: 'SRAM0 · line 1', access: 'RW', value: '0x0000_00C8' },
+  { id: 'a2', addr: '0x8010_0000', dev: 'SRAM0', loc: 'page 256', name: 'SRAM0 · page 256', access: 'RW', value: '0xDEAD_BEEF' },
+  { id: 'b0', addr: '0xA000_0000', dev: 'SRAM1', loc: 'line 0', name: 'SRAM1 · line 0', access: 'RW', value: '0x00FF_1000', amib: 1, at: 'L2' },
+  { id: 'b1', addr: '0xA004_0000', dev: 'SRAM1', loc: 'page 1024', name: 'SRAM1 · page 1024', access: 'RW', value: '0x5A5A_0001', amib: 1, at: 'L2' },
+  { id: 'x0', addr: '0x9000_0000', dev: 'unmapped', loc: 'no region', name: 'unmapped · no region', access: '–', value: 'DECERR', valueColor: RED, bad: true },
+];
+
+const WDATA = '0xA5A5_1234';
+
+const PORTS = {
+  dma330: [
+    { name: 'AWVALID / AWREADY', note: 'out / in · to ASIB1', color: C_AW },
+    { name: 'ARVALID / ARREADY', note: 'out / in · to ASIB1', color: C_AR },
+    { name: 'AWQOS / ARQOS[3:0]', note: 'out · priority hint' },
+    { name: 'ACLK / ARESETn', note: 'in · one clock domain' },
+  ],
+  asib1: [
+    { name: 'AWVALID / AWREADY', note: 'in · from the DMA-330', color: C_AW },
+    { name: 'ARVALID / ARREADY', note: 'in · from the DMA-330', color: C_AR },
+    { name: 'BVALID / BREADY', note: 'out / in · to the DMA-330', color: C_B },
+    { name: 'RVALID / RREADY', note: 'out / in · to the DMA-330', color: C_R },
+  ],
+  splitter1: [
+    { name: 'region 0', note: '0x8000_0000 · 256MB → AMIB0' },
+    { name: 'region 1', note: '0xA000_0000 · 256MB → AMIB1' },
+    { name: 'default', note: 'no match → default subordinate' },
+  ],
+  asib0: [
+    { name: 'AWVALID / AWREADY', note: 'in · from the CPU', color: C_AW },
+    { name: 'ARVALID / ARREADY', note: 'in · from the CPU', color: C_AR },
+    { name: 'BVALID / RVALID', note: 'out · responses to the CPU', color: C_B },
+    { name: 'register slice', note: 'internal · one deep, per channel' },
+    { name: 'decode', note: 'internal · two regions plus default' },
+  ],
+  splitter: [
+    { name: 'region 0', note: '0x8000_0000 · 256MB → AMIB0' },
+    { name: 'region 1', note: '0xA000_0000 · 256MB → AMIB1' },
+    { name: 'default', note: 'no match → default subordinate' },
+  ],
+  amib0: [
+    { name: 'AWVALID / AWREADY', note: 'out / in · to SRAM0', color: C_AW },
+    { name: 'ARVALID / ARREADY', note: 'out / in · to SRAM0', color: C_AR },
+    { name: 'BRESP / RRESP', note: 'in · from SRAM0', color: C_B },
+    { name: 'region', note: '0x8000_0000 – 0x8FFF_FFFF' },
+  ],
+  amib1: [
+    { name: 'AWVALID / AWREADY', note: 'out / in · to SRAM1', color: C_AW },
+    { name: 'ARVALID / ARREADY', note: 'out / in · to SRAM1', color: C_AR },
+    { name: 'BRESP / RRESP', note: 'in · from SRAM1', color: C_B },
+    { name: 'region', note: '0xA000_0000 – 0xAFFF_FFFF' },
+  ],
+  dslv: [
+    { name: 'BRESP[1:0]', note: 'out · always DECERR', color: RED },
+    { name: 'RRESP[1:0] / RLAST', note: 'out · always DECERR', color: RED },
+    { name: 'RDATA[63:0]', note: 'out · undefined, must be ignored' },
+  ],
+  sram1: [
+    { name: 'AWREADY / WREADY', note: 'out · write side', color: C_AW },
+    { name: 'ARREADY', note: 'out · read side', color: C_AR },
+    { name: 'BVALID / BRESP', note: 'out · one per transaction', color: C_B },
+    { name: 'RVALID / RLAST / RRESP', note: 'out · read data', color: C_R },
+  ],
+  cpu: [
+    { name: 'AWADDR[31:0]', note: 'out · write address', color: C_AW },
+    { name: 'AWID[3:0]', note: 'out · transaction ID', color: C_AW },
+    { name: 'WDATA[63:0] / WLAST', note: 'out · write data', color: C_W },
+    { name: 'BRESP[1:0]', note: 'in · write response', color: C_B },
+    { name: 'ARADDR[31:0]', note: 'out · read address', color: C_AR },
+    { name: 'RDATA[63:0] / RLAST', note: 'in · read data', color: C_R },
+  ],
+  nic400: [
+    { name: 'ASIB0', note: 'manager-facing port · from the CPU' },
+    { name: 'AMIB0', note: 'subordinate-facing port · to SRAM0' },
+    { name: 'decode', note: 'internal · one mapped region' },
+    { name: 'ACLK / ARESETn', note: 'in · one clock domain' },
+  ],
+  sram0: [
+    { name: 'AWREADY', note: 'out · low inserts a wait cycle', color: C_AW },
+    { name: 'WREADY', note: 'out · write data accepted', color: C_W },
+    { name: 'BVALID / BRESP[1:0]', note: 'out · one per transaction', color: C_B },
+    { name: 'ARREADY', note: 'out · read address accepted', color: C_AR },
+    { name: 'RVALID / RLAST / RRESP', note: 'out · read data', color: C_R },
+  ],
+};
+
+const INFO = {
+  dma330: {
+    name: 'DMA-330', sub: 'CoreLink DMA controller · AXI4 manager',
+    prose: 'The second manager. It issues its own transfers on its own port and knows nothing about the CPU \u2014 the two only meet where they decode to the same destination. Its AxQOS value is what the arbiter reads when the policy is QoS priority.',
+    rules: [
+      'A manager never sees arbitration. It drives VALID and waits; a grant it did not win simply looks like READY staying low.',
+      'AxQOS is a hint carried with the address, not a guarantee: an arbiter configured for round-robin ignores it.',
+      'Both managers may issue in the same cycle. Separate ports means separate handshakes.',
+    ],
+  },
+  asib1: {
+    name: 'ASIB1', sub: 'Manager-facing port · NIC-400',
+    prose: 'The DMA-330\u2019s port into the interconnect, identical to ASIB0. One ASIB per manager is what makes two managers possible at all: each has its own five channels and its own register slice, so neither can block the other before decode.',
+    rules: [
+      'An ASIB accepts an address without knowing whether the destination is free.',
+      'Contention appears later, at the destination, not here.',
+      'Each ASIB carries its manager\u2019s AxQOS through to the arbiter unchanged.',
+    ],
+  },
+  splitter1: {
+    name: 'splitter', sub: 'ASIB1 decode and fan-out · combinational',
+    prose: 'The DMA-330\u2019s own decode and fan-out stage. Each ASIB has one: the address map is the same, so both splitters reach the same three destinations, which is exactly why two managers can collide on one of them.',
+    rules: [
+      'Same regions, same decode, one splitter per manager.',
+      'The splitter selects a destination; it does not decide who gets it.',
+      'Two splitters selecting different destinations means no arbitration at all.',
+    ],
+  },
+  asib0: {
+    name: 'ASIB0', sub: 'Manager-facing port · NIC-400',
+    prose: 'The interconnect port the CPU is wired to. It is the subordinate end of that link \u2014 to the CPU it answers READY \u2014 which is why the acronym still carries the older word. It terminates all five channels, holds a one-deep register slice per channel, and decodes the address to pick a branch.',
+    rules: [
+      'The ASIB accepts the address in the cycle it asserts AWREADY or ARREADY, whatever the far side is doing.',
+      'Address decode happens here, after the handshake — a manager cannot be told its address is bad before the address is taken.',
+      'One ASIB per manager. A second manager gets its own, which is what L3 adds.',
+    ],
+  },
+  splitter: {
+    name: 'nic400-splitter', sub: 'Address decode and fan-out · combinational',
+    prose: 'The decode and fan-out stage. It compares the captured address against each AMIB region and drives the transfer onto that AMIB. There is no table lookup, no header and no store-and-forward: the regions are wired at configuration time and the match is combinational, so the branch costs no extra cycle.',
+    rules: [
+      'Regions may not overlap. A configuration with overlapping regions is illegal, not arbitrated.',
+      'An address matching no region selects the default subordinate, which returns DECERR.',
+      'The split is by address only. Which manager issued the transfer does not affect the branch.',
+    ],
+  },
+  amib0: {
+    name: 'AMIB0', sub: 'Subordinate-facing port · NIC-400',
+    prose: 'The interconnect port that drives SRAM0. It is the manager end of that link: it asserts VALID and waits for the subordinate\u2019s READY. It owns the region 0x8000_0000 – 0x8FFF_FFFF and, from L3, the arbiter between competing managers.',
+    rules: [
+      'The AMIB sees the subordinate\u2019s READY directly — this is where backpressure enters the interconnect.',
+      'Its region base and size are configuration, not registers: software cannot move it.',
+      'One AMIB per subordinate port.',
+    ],
+  },
+  amib1: {
+    name: 'AMIB1', sub: 'Subordinate-facing port · NIC-400',
+    prose: 'The second subordinate-facing port, driving SRAM1 over 0xA000_0000 – 0xAFFF_FFFF. It is identical to AMIB0 in every respect except its region — which is the whole point of the level: one manager now has somewhere to be sent that is not the only choice.',
+    rules: [
+      'Two AMIBs, two regions, one decode. The splitter selects exactly one per transfer.',
+      'Nothing orders a transfer to AMIB0 against a transfer to AMIB1 — different subordinates complete independently.',
+      'A transfer never reaches an AMIB whose region did not match.',
+    ],
+  },
+  dslv: {
+    name: 'default subordinate', sub: 'NIC-400 · answers unmatched addresses',
+    prose: 'Not a real subordinate and not on any bus you can see from software: a small responder inside the interconnect that exists so no address can go unanswered. It accepts the transfer and returns DECERR — decode error — on B or R.',
+    rules: [
+      'AXI has no way to refuse or retry a transfer. Once VALID has been accepted, a response is mandatory.',
+      'DECERR means no subordinate owns the address. SLVERR means one does and it failed.',
+      'Without a default subordinate an unmapped access would hang the manager port forever.',
+    ],
+  },
+  sram1: {
+    name: 'SRAM1', sub: 'DMC-style controller · AXI4 subordinate',
+    prose: 'The second subordinate, reached through AMIB1. It behaves exactly like SRAM0 — same handshakes, same single-beat transfers — and exists so the decoder has a real decision to make.',
+    rules: [
+      'A subordinate never sees the address map. It answers whatever arrives on its port.',
+      'Two subordinates do not need to be the same width, speed or clock domain; L5 covers what the interconnect inserts when they are not.',
+      'READY low is still the only backpressure.',
+    ],
+  },
+  cpu: {
+    name: 'CPU', sub: 'Cortex-A class · AXI4 manager',
+    prose: 'The manager that originates the transfer. At this level it keeps one transaction in flight: a write is AW plus a single W beat and then it waits for B; a read is AR and then it waits for R with RLAST high.',
+    rules: [
+      'A source may not withdraw VALID once it is asserted — it must hold it until READY is high.',
+      'READY may be asserted before VALID, and may be withdrawn while VALID is still low.',
+      'The read and write channels are independent: nothing orders AR against AW.',
+    ],
+  },
+  nic400: {
+    name: 'NIC-400', sub: 'CoreLink AXI interconnect · mux, not packet-switched',
+    prose: 'A configurable AXI interconnect built as a mux. An ASIB terminates each manager, an AMIB drives each subordinate, and a crossbar of dedicated per-channel wires joins them. There is no header, no packet and no store-and-forward stage.',
+    rules: [
+      'Each channel crosses the interconnect on its own wires — traffic on AW cannot block AR.',
+      'The ASIB register slice accepts the address in one cycle, so subordinate backpressure is not seen by the manager in the same cycle.',
+      'Ordering is by AxID: transactions carrying the same ID must complete in order.',
+      'An address that matches no region is still answered — the interconnect returns DECERR rather than leaving the manager waiting.',
+    ],
+  },
+  sram0: {
+    name: 'SRAM0', sub: 'DMC-style controller · AXI4 subordinate',
+    prose: 'The subordinate. It takes an address in the cycle it asserts AWREADY or ARREADY, and returns BRESP for a write or RDATA for a read when it is ready. Press STALL 1 CLK to make it hold READY low for one cycle.',
+    rules: [
+      'READY low is the only backpressure mechanism in AXI — there is no retry and no negative acknowledge.',
+      'RLAST must be high on the final beat of a read; a single-beat read asserts it on the first beat.',
+      'BRESP is returned once per write transaction, never once per beat.',
+    ],
+  },
+};
+
+const REF_SIGNALS = [
+  { name: 'AWQOS / ARQOS[3:0]', meta: 'payload', color: AMBER, note: 'A four-bit priority hint issued with the address. An arbiter configured for QoS priority grants the higher value first; one configured for round-robin ignores it entirely. It is a hint, not a reservation \u2014 nothing in AXI guarantees what an arbiter does with it.' },
+  { name: 'AWLEN / ARLEN[7:0]', meta: 'payload', color: VIOLET, note: 'Beats in the burst, minus one: ARLEN = 3 is a four-beat burst. One address transfer covers every beat, which is why AXI spends so little of its bandwidth on addresses.' },
+  { name: 'AWSIZE / ARSIZE[2:0]', meta: 'payload', color: VIOLET, note: 'Bytes per beat, as a power of two. It may be smaller than the data bus but never larger.' },
+  { name: 'AWBURST / ARBURST[1:0]', meta: 'payload', color: VIOLET, note: 'INCR walks the address forward one AxSIZE per beat, WRAP wraps within an aligned block for cache line fills, FIXED repeats the same address. The model issues INCR.' },
+  { name: 'AWID / ARID · BID / RID', meta: 'payload', color: AMBER, note: 'The transaction tag. Beats and responses carry the ID of the transaction they belong to: same-ID traffic must stay in order, different IDs may complete in any order. AXI4 has no WID, so write data may never interleave.' },
+  { name: 'RLAST / WLAST', meta: 'handshake', color: C_R, note: 'High on the final beat of a burst. It is how the far side knows a burst is over — a beat count is not carried with the data.' },
+  { name: 'ID widening', meta: 'interconnect', color: AMBER, note: 'B and R carry no address, so an interconnect serving several managers cannot tell from a response where to return it. Each ASIB appends its own port number to the incoming AxID — a 4-bit manager ID becomes 5 bits inside the NIC-400 — and strips that bit off BID or RID to select the return path. The manager never sees the widened field, and the width it sees back always matches the width it drove.' },
+  { name: 'AWVALID / AWREADY', meta: 'handshake', color: C_AW, note: 'The manager asserts AWVALID when the write address is valid and holds it until AWREADY is high. The transfer happens on the rising ACLK edge where both are high.' },
+  { name: 'AWADDR[31:0]', meta: 'payload', color: C_AW, note: 'Address of the first beat of the write burst. Must be stable while AWVALID is high.' },
+  { name: 'WDATA / WSTRB', meta: 'payload', color: C_W, note: 'Write data and its byte-enable strobes. WSTRB selects which byte lanes of WDATA are written.' },
+  { name: 'WLAST', meta: '1 bit', color: C_W, note: 'High on the final beat of the write burst. A single-beat write asserts it on the first beat.' },
+  { name: 'BRESP[1:0]', meta: 'response', color: C_B, note: 'OKAY, EXOKAY, SLVERR or DECERR — one response for the whole write transaction, not per beat.' },
+  { name: 'ARVALID / ARREADY', meta: 'handshake', color: C_AR, note: 'Same handshake on the read address channel. AR is completely independent of AW.' },
+  { name: 'RDATA / RRESP', meta: 'payload', color: C_R, note: 'Read data and its response, per beat. A burst may return OKAY on some beats and SLVERR on others.' },
+  { name: 'RLAST', meta: '1 bit', color: C_R, note: 'Marks the final beat of the read burst; the manager uses it to close the transaction.' },
+  { name: 'AWID / ARID / BID / RID', meta: 'ordering', color: 'oklch(0.72 0.15 300)', note: 'Transaction identifiers. Same-ID transactions must complete in order; different IDs may complete out of order. Built at L4.' },
+  { name: 'ACLK / ARESETn', meta: 'global', note: 'One rising-edge clock per domain and an active-LOW reset. All AXI signals are sampled on the rising edge of ACLK.' },
+];
+
+const REF_BLOCKS = [
+  { name: 'ASIB', meta: 'NIC-400', note: 'AXI Slave Interface Block (older naming; the role is the subordinate end of the manager link) — the interconnect port a manager connects to. It terminates the manager\u2019s channels and holds the register slice and ID remapping.' },
+  { name: 'AMIB', meta: 'NIC-400', note: 'AXI Master Interface Block (older naming; the role is the manager end of the subordinate link) — the interconnect port that drives a subordinate. Arbitration between managers happens here.' },
+  { name: 'nic400-splitter', meta: 'NIC-400', note: 'Splits one manager\u2019s traffic across several AMIBs by address, so one ASIB can reach several subordinates. Still a mux: the split is decode plus wires, not routing. Drawn at L2.' },
+  { name: 'register slice', meta: 'NIC-400 / 450', note: 'A one-deep pipeline stage on a channel. It adds a cycle of latency to buy timing closure and decouples READY backpressure between the two sides.' },
+  { name: 'arbiter', meta: 'NIC-400', note: 'The selection stage in front of every subordinate-facing port. When two ASIBs request the same destination in one cycle it grants one of them for the whole transfer, by round-robin or by AxQOS priority. Drawn at L3.' },
+  { name: 'default subordinate', meta: 'NIC-400', note: 'Answers any address that matches no region, returning DECERR so that the manager is never left waiting. Drawn at L2.' },
+  { name: 'NIC-450', meta: 'successor', note: 'The later generation of the same mux-based interconnect, with more configurable slices, width converters and asynchronous clock-domain bridges. Built at L5.' },
+];
+
+class Component extends DCLogic {
+  state = {
+    level: 'L1',
+    view: 'network',
+    sel: 'nic400',
+    mode: this.props.startMode === 'WRITE' ? 'write' : 'read',
+    stall: false,
+    target: 'a0',
+    dmaMode: 'read',
+    dmaTarget: 'a1',
+    qosCpu: 4,
+    qosDma: 8,
+    policy: 'rr',
+    who: 'cpu',
+    lenSwap: false,
+    ooo: false,
+    t: 0,
+    running: false,
+    trace: [],
+  };
+
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+
+  /* L3 helpers: each manager has its own target, and the destination each one decodes to
+     decides whether there is anything to arbitrate. */
+  mReg(who) { const id = who === 'dma' ? this.state.dmaTarget : this.state.target; return REGS.find((x) => x.id === id) || REGS[0]; }
+  mBranch(who) { const r = this.mReg(who); return r.bad ? 2 : r.amib === 1 ? 1 : 0; }
+  grant() {
+    const st = this.state;
+    if (this.mBranch('cpu') !== this.mBranch('dma')) return { contend: false, win: null, why: 'different destinations' };
+    if (st.policy === 'qos' && st.qosCpu !== st.qosDma) {
+      const win = st.qosCpu > st.qosDma ? 'cpu' : 'dma';
+      return { contend: true, win, why: 'AxQOS ' + (win === 'cpu' ? st.qosCpu : st.qosDma) + ' beats ' + (win === 'cpu' ? st.qosDma : st.qosCpu) };
+    }
+    return { contend: true, win: 'cpu', why: st.policy === 'qos' ? 'equal AxQOS, so the round-robin pointer decides' : 'round-robin: the previous grant went to ASIB1' };
+  }
+  eventsL3() {
+    const g = this.grant();
+    const first = { h1: 1, h2: 2, h3: 3, b1: 4, b2: 5, b3: 6 };
+    const late = { h1: 1, h2: 2, h3: 4, b1: 5, b2: 6, b3: 7 };
+    if (!g.contend) return { l3: true, contend: false, win: null, why: g.why, cpu: first, dma: first, h2: 2, period: 8 };
+    return { l3: true, contend: true, win: g.win, why: g.why, cpu: g.win === 'cpu' ? first : late, dma: g.win === 'dma' ? first : late, h2: 2, period: 9 };
+  }
+
+  /* L4: two transactions, ID0 to SRAM0 and ID1 to SRAM1, each a burst. The schedule is built
+     once per render — beats are one per cycle on the shared trunk, and each beat is three
+     cycles behind its own subordinate (subordinate → destination → splitter → manager). */
+  hexAdd(base, n) {
+    const v = (parseInt(base.replace(/0x|_/g, ''), 16) + n) >>> 0;
+    const h = v.toString(16).toUpperCase().padStart(8, '0');
+    return '0x' + h.slice(0, 4) + '_' + h.slice(4);
+  }
+  schedL4() {
+    const st = this.state, w = st.mode === 'write';
+    const lenA = st.lenSwap ? 2 : 4, lenB = st.lenSwap ? 4 : 2;
+    const A = { id: 0, len: lenA, br: 0, addr: '0x8000_0000', sub: 'SRAM0', dest: 'AMIB0', base: '0x1F00_2A40', h1: 1, h2: 2, h3: 3 };
+    const B = { id: 1, len: lenB, br: 1, addr: '0xA000_0000', sub: 'SRAM1', dest: 'AMIB1', base: '0x00FF_1000', h1: 2, h2: 3, h3: 4 };
+    if (!w) {
+      let ra = 0, rb = 0, c = 4;
+      const seq = [];
+      while (ra < lenA || rb < lenB) {
+        const rA = ra < lenA, rB = c >= 5 && rb < lenB;
+        let pick = null;
+        if (st.ooo) {
+          const preferB = seq.length > 0 && seq[seq.length - 1].id === 0;
+          pick = preferB ? (rB ? 'B' : rA ? 'A' : null) : (rA ? 'A' : rB ? 'B' : null);
+        } else pick = rA ? 'A' : rB ? 'B' : null;
+        if (pick === 'A') { ra++; seq.push({ id: 0, beat: ra - 1, c, last: ra === lenA }); }
+        else if (pick === 'B') { rb++; seq.push({ id: 1, beat: rb - 1, c, last: rb === lenB }); }
+        c++;
+      }
+      const arr = seq.map((x) => x.c + 2);
+      return { w: false, lenA, lenB, A, B, seq, N: lenA + lenB, period: Math.max.apply(null, arr) + 2, ooo: st.ooo };
+    }
+    const seq = [];
+    for (let i = 0; i < lenA; i++) seq.push({ id: 0, beat: i, c: 3 + i, last: i === lenA - 1 });
+    for (let i = 0; i < lenB; i++) seq.push({ id: 1, beat: i, c: 3 + lenA + i, last: i === lenB - 1 });
+    let bA = 3 + lenA - 1 + 3, bB = 3 + lenA + lenB - 1 + 3;
+    if (st.ooo) bA = Math.max(bA, bB + 1); else bB = Math.max(bB, bA + 1);
+    const resp = { 0: bA, 1: bB };
+    return { w: true, lenA, lenB, A, B, seq, resp, N: lenA + lenB, period: Math.max(bA, bB) + 2, ooo: st.ooo };
+  }
+
+  /* Spans at L4, as at L2 but bundled: s1 CPU↔ASIB0, s2 ASIB0↔splitter, fan splitter↔dest,
+     s3 dest↔subordinate. Values carry their own label so the wire can name the beat. */
+  actL4(t) {
+    const s = this.schedL4();
+    const o = { fan: [null, null, null], s3: [null, null, null], s1: null, s2: null };
+    const b = { fan: [null, null, null], s3: [null, null, null], s1: null, s2: null };
+    const ax = s.w ? 'AW' : 'AR';
+    [s.A, s.B].forEach((x) => {
+      const lab = ax + ' ID' + x.id + ' · LEN ' + x.len + ' · INCR';
+      if (t === x.h1) o.s1 = { lab, id: x.id, kind: 'addr' };
+      if (t === x.h2) o.s2 = { lab, id: x.id, kind: 'addr' };
+      if (t === x.h3) { o.fan[x.br] = { lab, id: x.id, kind: 'addr' }; o.s3[x.br] = { lab, id: x.id, kind: 'addr' }; }
+    });
+    if (s.w) {
+      s.seq.forEach((x) => {
+        const src = x.id === 0 ? s.A : s.B;
+        const lab = 'W ' + this.hexAdd(WDATA, x.beat * 8) + ' · beat ' + (x.beat + 1) + '/' + src.len + (x.last ? ' · WLAST' : '');
+        if (t === x.c) o.s1 = { lab, id: x.id, kind: 'data' };
+        if (t === x.c + 1) o.s2 = { lab, id: x.id, kind: 'data' };
+        if (t === x.c + 2) { o.fan[src.br] = { lab, id: x.id, kind: 'data' }; o.s3[src.br] = { lab, id: x.id, kind: 'data' }; }
+      });
+      [s.A, s.B].forEach((x) => {
+        const at = s.resp[x.id];
+        const lab = 'B OKAY · BID = ' + x.id;
+        if (t === at - 2) b.s3[x.br] = { lab, id: x.id, kind: 'resp' };
+        if (t === at - 1) { b.fan[x.br] = { lab, id: x.id, kind: 'resp' }; b.s2 = { lab, id: x.id, kind: 'resp' }; }
+        if (t === at) b.s1 = { lab, id: x.id, kind: 'resp' };
+      });
+      return { o, b, s };
+    }
+    s.seq.forEach((x) => {
+      const src = x.id === 0 ? s.A : s.B;
+      const lab = 'R ' + this.hexAdd(src.base, x.beat * 8) + ' · RID = ' + x.id + (x.last ? ' · RLAST' : '');
+      if (t === x.c) b.s3[src.br] = { lab, id: x.id, kind: 'data' };
+      if (t === x.c + 1) { b.fan[src.br] = { lab, id: x.id, kind: 'data' }; b.s2 = { lab, id: x.id, kind: 'data' }; }
+      if (t === x.c + 2) b.s1 = { lab, id: x.id, kind: 'data' };
+    });
+    return { o, b, s };
+  }
+
+  traceL4(t) {
+    const s = this.schedL4();
+    const idle = 'oklch(0.58 0.008 258)';
+    const w = s.w, ax = w ? 'AW' : 'AR';
+    const nm = (id) => 'ID' + id;
+    const sub = (id) => (id === 0 ? 'SRAM0' : 'SRAM1');
+    const dst = (id) => (id === 0 ? 'AMIB0' : 'AMIB1');
+    const lenOf = (id) => (id === 0 ? s.lenA : s.lenB);
+    if (t === 0) return { cycle: 0, state: 'IDLE', color: idle,
+      text: 'Nothing issued. Two ' + (w ? 'writes' : 'reads') + ' are armed: ' + nm(0) + ' is ' + s.lenA + ' beats at ' + s.A.addr + ' in SRAM0, ' + nm(1) + ' is ' + s.lenB + ' beats at ' + s.B.addr + ' in SRAM1. One AxID each, so the interconnect may return them in either order.' };
+    if (t === 1) return { cycle: 1, state: ax + ' ID0', color: w ? C_AW : C_AR,
+      text: ax + 'VALID and ' + ax + 'READY high with ' + ax + 'ID = 0, ' + ax + 'ADDR = ' + s.A.addr + ', ' + ax + 'LEN = ' + (s.lenA - 1) + ' (' + s.lenA + ' beats), ' + ax + 'SIZE = 8 bytes, ' + ax + 'BURST = INCR. One address transfer describes the whole burst.' };
+    if (t === 2) return { cycle: 2, state: ax + ' ID1', color: w ? C_AW : C_AR,
+      text: 'The second address is accepted in the very next cycle with ' + ax + 'ID = 1 — the manager does not wait for ID0 to finish. Two outstanding transactions, distinguished only by their ID.' };
+    if (!w) {
+      const beat = s.seq.find((x) => x.c + 2 === t);
+      if (beat) {
+        const first = s.seq.findIndex((x) => x === beat) === 0;
+        const done = beat.last;
+        return { cycle: t, state: 'R · RID ' + beat.id + (done ? ' · RLAST' : ''), color: C_R,
+          text: 'RVALID and RREADY high: ' + this.hexAdd(beat.id === 0 ? s.A.base : s.B.base, beat.beat * 8) + ' arrives with RID = ' + beat.id + ', beat ' + (beat.beat + 1) + ' of ' + lenOf(beat.id) + '.'
+            + (done ? ' RLAST is high, so this ID is complete and its ID may be reused.' : '')
+            + (first ? ' The address phase is over; from here the read data channel does all the work.' : '')
+            + (s.ooo && !done ? ' RID is the only thing that says which transaction this beat belongs to — the beats of ID0 and ID1 are interleaved on the same channel.' : '') };
+      }
+      if (t === 3) return { cycle: 3, state: 'AR ID0 · ' + dst(0), color: C_AR, text: 'ID0\u2019s address crosses AMIB0 into SRAM0. Its ' + s.lenA + ' beats are now SRAM0\u2019s to deliver; the interconnect only has to keep the ID with them.' };
+      if (t === 4) return { cycle: 4, state: 'AR ID1 · ' + dst(1), color: C_AR, text: 'ID1\u2019s address crosses AMIB1 into SRAM1, and SRAM0 puts ID0\u2019s first beat on its read data channel in the same cycle. Two subordinates, both busy.' };
+      const lastArr = Math.max.apply(null, s.seq.map((x) => x.c + 2));
+      if (t <= lastArr) {
+        const g0 = s.seq.filter((x) => x.id === 0 && x.c + 2 <= t).length, g1 = s.seq.filter((x) => x.id === 1 && x.c + 2 <= t).length;
+        return { cycle: t, state: 'IN FLIGHT', color: C_R,
+          text: 'No beat lands on the manager port this cycle \u2014 the next one is still crossing back through its AMIB and the splitter, three cycles behind the subordinate that produced it. ID0 ' + g0 + ' of ' + s.lenA + ' beats returned, ID1 ' + g1 + ' of ' + s.lenB + '.' };
+      }
+      return { cycle: t, state: 'IDLE', color: idle, text: 'Both bursts are complete: ' + s.lenA + ' beats on ID0 and ' + s.lenB + ' on ID1, each closed by RLAST.' + (s.ooo ? ' ID1 finished first even though it was issued second — nothing in AXI orders transactions with different IDs.' : ' In order, because that is how the subordinates were served — AXI does not require it.') };
+    }
+    const wb = s.seq.find((x) => x.c === t);
+    if (wb) return { cycle: t, state: 'W · beat ' + (wb.beat + 1), color: C_W,
+      text: 'WVALID and WREADY high: ' + this.hexAdd(WDATA, wb.beat * 8) + ', beat ' + (wb.beat + 1) + ' of ' + lenOf(wb.id) + ' for ' + nm(wb.id) + '.' + (wb.last ? ' WLAST closes this burst.' : '')
+        + (wb.beat === 0 && wb.id === 0 ? ' AXI4 has no WID, so write data may not interleave: every beat of ID0 must be sent before the first beat of ID1.' : '') };
+    const resp = [0, 1].find((id) => s.resp[id] === t);
+    if (resp !== undefined) return { cycle: t, state: 'B · BID ' + resp, color: C_B,
+      text: 'BVALID with BRESP = OKAY and BID = ' + resp + ' — ' + nm(resp) + '\u2019s write is complete. One response per transaction, never per beat.'
+        + (s.ooo && resp === 1 ? ' It completed before ID0 even though its data was sent second: responses to different IDs may return in any order.' : '') };
+    const lastB = Math.max(s.resp[0], s.resp[1]);
+    if (t <= lastB) {
+      const doneIds = [0, 1].filter((id) => s.resp[id] < t);
+      return { cycle: t, state: 'WAITING FOR B', color: C_B,
+        text: 'All ' + (s.lenA + s.lenB) + ' data beats have been sent. ' + (doneIds.length === 1
+          ? 'ID' + doneIds[0] + ' has been answered; the other transaction is still waiting for its B \u2014 a write is not complete until its response arrives.'
+          : 'Both transactions are waiting for their B response \u2014 a write is not complete until it is answered, however long the subordinate takes.') };
+    }
+    return { cycle: t, state: 'IDLE', color: idle, text: 'Both writes are complete, each answered once, and both IDs are free to be reused.' };
+  }
+
+  events(st) {
+    const cur = st || this.state;
+    if (cur.level === 'L4') { const s = this.schedL4(); return { l4: true, period: s.period, sched: s }; }
+    if (cur.level === 'L3') return this.eventsL3();
+    const bad = this.isBad(cur);
+    const s = !bad && cur.stall ? 1 : 0;
+    if (cur.level === 'L2') {
+      /* Two hops out (manager port, then decode), the branch, then the same back. */
+      return { s, bad, l2: true, h1: 1, h2: 2, h3: 3 + s, b1: 4 + s, b2: 5 + s, b3: 6 + s, period: 8 + s };
+    }
+    if (cur.mode === 'write') {
+      if (bad) return { s: 0, bad, awM: 1, wM: 2, bM: 3, period: 5 };
+      return { s, bad, awM: 1, wM: 2, awS: 2 + s, wS: 3 + s, bS: 4 + s, bM: 5 + s, period: 7 + s };
+    }
+    if (bad) return { s: 0, bad, arM: 1, rM: 2, period: 4 };
+    return { s, bad, arM: 1, arS: 2 + s, rS: 3 + s, rM: 4 + s, period: 6 + s };
+  }
+
+  reg(st) { const s = st || this.state; return REGS.find((x) => x.id === s.target) || REGS[0]; }
+  isBad(st) { return !!this.reg(st).bad; }
+
+  /* Which channel is live on which span, this cycle. 'on' = VALID & READY, 'stall' = VALID & !READY. */
+  act(t) {
+    const e = this.events();
+    const L = {}, R = {};
+    if (this.state.mode === 'write') {
+      if (t === e.awM) L.aw = 'on';
+      if (t === e.wM) L.w = 'on';
+      if (t === e.bM) L.b = e.bad ? 'err' : 'on';
+      if (e.bad) return { L, R };
+      if (e.s && t === e.awS - 1) R.aw = 'stall';
+      else if (t === e.awS) R.aw = 'on';
+      if (t === e.wS) R.w = 'on';
+      if (t === e.bS) R.b = 'on';
+    } else {
+      if (t === e.arM) L.ar = 'on';
+      if (t === e.rM) L.r = e.bad ? 'err' : 'on';
+      if (e.bad) return { L, R };
+      if (e.s && t === e.arS - 1) R.ar = 'stall';
+      else if (t === e.arS) R.ar = 'on';
+      if (t === e.rS) R.r = 'on';
+    }
+    return { L, R };
+  }
+
+  /* Which span is live this cycle. Spans: s1 CPU↔ASIB0, s2 ASIB0↔splitter, fan splitter↔branch,
+     s3 branch↔subordinate. 'on' = accepted, 'stall' = VALID with READY low, 'err' = DECERR. */
+  actL2(t) {
+    const e = this.events();
+    const o = {}, b = {};
+    if (t === e.h1) o.s1 = 'on';
+    if (t === e.h2) o.s2 = 'on';
+    if (e.s && t === e.h3 - 1) { o.fan = 'stall'; o.s3 = 'stall'; }
+    else if (t === e.h3) { o.fan = 'on'; if (!e.bad) o.s3 = 'on'; }
+    if (t === e.b1) { if (e.bad) b.fan = 'err'; else b.s3 = 'on'; }
+    if (t === e.b2) { if (e.bad) b.s2 = 'err'; else { b.fan = 'on'; b.s2 = 'on'; } }
+    if (t === e.b3) b.s1 = e.bad ? 'err' : 'on';
+    return { o, b };
+  }
+
+  branch() { const r = this.reg(); return r.bad ? 2 : r.amib === 1 ? 1 : 0; }
+
+  /* Per-manager span activity at L3. Spans as at L2, one set per manager: s1 manager↔ASIB,
+     s2 ASIB↔splitter, fan splitter↔destination, s3 destination↔subordinate. */
+  actL3(t) {
+    const e = this.events();
+    const out = {}, back = {};
+    ['cpu', 'dma'].forEach((m) => {
+      const c = e[m], bad = this.mBranch(m) === 2;
+      const o = {}, b = {};
+      if (t === c.h1) o.s1 = 'on';
+      if (t === c.h2) o.s2 = 'on';
+      if (e.contend && e.win !== m && t === c.h3 - 1) o.fan = 'stall';
+      else if (t === c.h3) { o.fan = 'on'; if (!bad) o.s3 = 'on'; }
+      if (t === c.b1) { if (bad) b.fan = 'err'; else b.s3 = 'on'; }
+      if (t === c.b2) { if (bad) b.s2 = 'err'; else { b.fan = 'on'; b.s2 = 'on'; } }
+      if (t === c.b3) b.s1 = bad ? 'err' : 'on';
+      out[m] = o; back[m] = b;
+    });
+    return { out, back };
+  }
+
+  traceL3(t) {
+    const st = this.state, e = this.events();
+    const idle = 'oklch(0.58 0.008 258)';
+    const dName = (k) => (k === 2 ? 'the default subordinate' : 'AMIB' + k);
+    const sName = (k) => (k === 2 ? 'the default subordinate' : k === 1 ? 'SRAM1' : 'SRAM0');
+    const M = {
+      cpu: { n: 'CPU', asib: 'ASIB0', w: st.mode === 'write', a: this.mReg('cpu').addr, v: this.mReg('cpu').value, br: this.mBranch('cpu'), ev: e.cpu },
+      dma: { n: 'DMA-330', asib: 'ASIB1', w: st.dmaMode === 'write', a: this.mReg('dma').addr, v: this.mReg('dma').value, br: this.mBranch('dma'), ev: e.dma },
+    };
+    const ax = (m) => (m.w ? 'AW' : 'AR');
+    const rx = (m) => (m.w ? 'B' : 'R');
+    const win = e.win === 'dma' ? M.dma : M.cpu, lose = e.win === 'dma' ? M.cpu : M.dma;
+    const done = (m) => (m.br === 2
+      ? rx(m) + 'RESP = DECERR reaches ' + m.n + ' — an error response is still a completion.'
+      : m.w ? 'BRESP = OKAY reaches ' + m.n + ' — its write is complete.' : 'RDATA = ' + m.v + ' reaches ' + m.n + ' — its read is complete.');
+    if (t === 0) return { cycle: 0, state: 'IDLE', color: idle,
+      text: 'Both manager ports are idle. CPU is armed with ' + M.cpu.a + ' and DMA-330 with ' + M.dma.a + (e.contend
+        ? ' — both decode to ' + dName(M.cpu.br) + ', so its arbiter will have to pick one.'
+        : ' — different destinations, so nothing has to be arbitrated.') };
+    if (t === 1) return { cycle: 1, state: 'ADDRESS', color: AXI,
+      text: 'Both managers drive VALID in the same cycle and both are accepted: ' + ax(M.cpu) + 'VALID with ' + M.cpu.a + ' into ASIB0, ' + ax(M.dma) + 'VALID with ' + M.dma.a + ' into ASIB1. Separate ports, so there is no contention yet — an ASIB never refuses a transfer on another manager\u2019s behalf.' };
+    if (t === 2) return { cycle: 2, state: e.contend ? 'DECODE · ARBITRATE' : 'DECODE', color: e.contend ? AMBER : AXI,
+      text: 'Each splitter decodes its own manager: CPU → ' + dName(M.cpu.br) + ', DMA-330 → ' + dName(M.dma.br) + '. ' + (e.contend
+        ? 'Both land on the same destination, so its arbiter grants ' + win.asib + ' — ' + e.why + '. ' + lose.asib + ' is not refused, it is simply not granted this cycle.'
+        : 'Two destinations, two arbiters, one request each: both are granted and the transfers run side by side.') };
+    if (t === 3) return e.contend
+      ? { cycle: 3, state: 'GRANTED · ' + win.asib, color: win.w ? C_AW : C_AR,
+          text: win.n + '\u2019s address crosses ' + dName(win.br) + ' into ' + sName(win.br) + '. ' + lose.n + ' holds ' + ax(lose) + 'VALID high and waits for the grant — head-of-line blocking, not a retry: VALID may not be withdrawn once asserted.' }
+      : { cycle: 3, state: 'ADDRESS', color: AXI,
+          text: 'Both addresses cross their own destination into ' + sName(M.cpu.br) + ' and ' + sName(M.dma.br) + ' in the same cycle. Nothing is shared, so nothing waits.' };
+    if (t === 4) return e.contend
+      ? { cycle: 4, state: 'GRANTED · ' + lose.asib, color: AMBER,
+          text: sName(win.br) + ' answers ' + win.n + ' at ' + dName(win.br) + ', and the arbiter now grants ' + lose.asib + ': ' + lose.n + '\u2019s address crosses one cycle later than it would have alone. That cycle is the whole cost of contention here.' }
+      : { cycle: 4, state: 'RESPONSE', color: C_B,
+          text: 'Both subordinates answer at their destinations in the same cycle — ' + (M.cpu.br === 2 || M.dma.br === 2 ? 'one of them from inside the interconnect, with DECERR.' : 'independent AMIBs complete independently, in any order.') };
+    if (t === 5) return e.contend
+      ? { cycle: 5, state: rx(win) + ' · ' + win.n, color: win.w ? C_B : C_R,
+          text: 'The response for ' + win.n + ' crosses back through its splitter to ' + win.asib + ', while ' + sName(lose.br) + ' answers ' + lose.n + '. Return paths are per-manager wires — the arbiter has nothing to do on the way back.' }
+      : { cycle: 5, state: 'COMPLETE', color: C_B,
+          text: done(M.cpu) + ' ' + done(M.dma) + ' Six cycles each, run in parallel.' };
+    if (e.contend && t === 6) return { cycle: 6, state: rx(win) + ' complete', color: win.w ? C_B : C_R,
+      text: done(win) + ' ' + lose.n + '\u2019s response is one hop behind it.' };
+    if (e.contend && t === 7) return { cycle: 7, state: rx(lose) + ' complete', color: lose.w ? C_B : C_R,
+      text: done(lose) + ' Seven cycles instead of six: the loser paid exactly one cycle for the grant it had to wait for.' };
+    return { cycle: t, state: 'IDLE', color: idle, text: 'Both transactions are finished and every port is free. Press RESET, or change a target so the two managers collide somewhere else.' };
+  }
+
+  traceL2(t) {
+    const e = this.events();
+    const a = this.addr();
+    const w = this.state.mode === 'write';
+    const br = this.branch();
+    const amib = 'AMIB' + br;
+    const sub = br === 1 ? 'SRAM1' : 'SRAM0';
+    const region = br === 1 ? '0xA000_0000 – 0xAFFF_FFFF' : '0x8000_0000 – 0x8FFF_FFFF';
+    const idle = 'oklch(0.58 0.008 258)';
+    if (t === 0) return { cycle: 0, state: 'IDLE', color: idle, text: 'Bus idle. ' + a + ' is armed at the CPU; nothing has been issued, so no decode has run.' };
+    if (t === e.h1) return { cycle: t, state: w ? 'AW · W' : 'AR', color: w ? C_AW : C_AR,
+      text: w
+        ? 'AWVALID and AWREADY high at the manager port, and WVALID with WLAST in the same cycle — nothing orders W against AW. ASIB0 captures AWADDR = ' + a + ' in its register slice.'
+        : 'ARVALID and ARREADY high at the manager port. ASIB0 captures ARADDR = ' + a + ' in its register slice — the handshake is unconditional, no decode has run yet.' };
+    if (t === e.h2) return e.bad
+      ? { cycle: t, state: 'DECODE · no match', color: RED, text: 'The splitter compares ' + a + ' against both regions and matches neither, so it selects the default subordinate. Decode is combinational address matching, not a lookup that can fail late.' }
+      : { cycle: t, state: 'DECODE', color: AXI, text: 'The splitter compares ' + a + ' against each AMIB region and matches ' + amib + ' (' + region + '). Regions may not overlap, so at most one can match.' };
+    if (e.s && t === e.h3 - 1) return { cycle: t, state: (w ? 'AW' : 'AR') + ' stall', color: AMBER,
+      text: (w ? 'AWVALID' : 'ARVALID') + ' held at ' + amib + ' while ' + sub + ' holds ' + (w ? 'AWREADY' : 'ARREADY') + ' low — one wait cycle. Only the selected branch waits: the other AMIB and the manager port are untouched.' };
+    if (t === e.h3) return e.bad
+      ? { cycle: t, state: 'DEFAULT SUBORDINATE', color: RED, text: 'The transfer is handed to the default subordinate inside the interconnect. Nothing crossed AMIB0 or AMIB1 — SRAM0 and SRAM1 never saw this address.' }
+      : { cycle: t, state: w ? 'AW · W' : 'AR', color: w ? C_AW : C_AR, text: amib + ' drives ' + (w ? 'AWVALID and WVALID' : 'ARVALID') + ' to ' + sub + ' and sees READY high — the address leaves the interconnect.' };
+    if (t === e.b1) return e.bad
+      ? { cycle: t, state: (w ? 'B' : 'R') + ' · DECERR', color: RED, text: 'The default subordinate answers: ' + (w ? 'BRESP = DECERR' : 'RRESP = DECERR with RLAST high and RDATA undefined') + '. AXI has no way to refuse a transfer, so a response is mandatory.' }
+      : { cycle: t, state: w ? 'B' : 'R', color: w ? C_B : C_R, text: w
+          ? sub + ' drives BVALID with BRESP = OKAY and ' + amib + ' accepts it — one response for the whole transaction.'
+          : sub + ' drives RVALID with RLAST high and RRESP = OKAY, and ' + amib + ' accepts it.' };
+    if (t === e.b2) return { cycle: t, state: w ? 'B' : 'R', color: e.bad ? RED : w ? C_B : C_R,
+      text: 'The response crosses back through the splitter to ASIB0 — the same dedicated wires in reverse. There is no arbitration on the return path at this level.' };
+    if (t === e.b3) return e.bad
+      ? { cycle: t, state: (w ? 'B' : 'R') + ' · DECERR', color: RED, text: (w ? 'BRESP' : 'RRESP') + ' = DECERR reaches the manager port. The transfer is complete — an error response is still a completion, and the port is free.' }
+      : { cycle: t, state: w ? 'B' : 'R', color: w ? C_B : C_R, text: w
+          ? 'BVALID and BREADY high at the manager port — the write completes. Six cycles: two hops out, the subordinate, two hops back.'
+          : 'RVALID and RREADY high at the manager port — RDATA = ' + this.rdata() + ' is sampled. Six cycles: two hops out, the subordinate, two hops back.' };
+    return { cycle: t, state: 'IDLE', color: idle, text: 'Transaction finished. Both branches are idle and the manager port is free.' };
+  }
+
+  addr() { const r = REGS.find((x) => x.id === this.state.target); return (r || REGS[0]).addr; }
+  rdata() { const r = REGS.find((x) => x.id === this.state.target); return (r || REGS[0]).value; }
+
+  traceFor(t) {
+    if (this.state.level === 'L4') return this.traceL4(t);
+    if (this.state.level === 'L3') return this.traceL3(t);
+    if (this.state.level === 'L2') return this.traceL2(t);
+    const e = this.events();
+    const a = this.addr();
+    const w = this.state.mode === 'write';
+    if (e.bad) {
+      if (t === 0) return { cycle: 0, state: 'IDLE', color: 'oklch(0.58 0.008 258)', text: 'Bus idle. ' + a + ' is armed, but it matches no region in the NIC-400 address map.' };
+      if (w) {
+        if (t === e.awM) return { cycle: t, state: 'AW', color: C_AW, text: 'AWVALID and AWREADY both high — ASIB0 accepts AWADDR = ' + a + '. The port handshake is unconditional: the decode happens after the address has been taken.' };
+        if (t === e.wM) return { cycle: t, state: 'W', color: C_W, text: 'WVALID with WLAST high is accepted. The write data is discarded — no AMIB matched, so there is nothing to write it to.' };
+        if (t === e.bM) return { cycle: t, state: 'B · DECERR', color: RED, text: 'The NIC-400 decoder matched no subordinate and returned BRESP = DECERR. Nothing crossed AMIB0 and SRAM0 never saw the address.' };
+      } else {
+        if (t === e.arM) return { cycle: t, state: 'AR', color: C_AR, text: 'ARVALID and ARREADY both high — ASIB0 accepts ARADDR = ' + a + ' before any decode has happened.' };
+        if (t === e.rM) return { cycle: t, state: 'R · DECERR', color: RED, text: 'The NIC-400 decoder matched no subordinate and returned RRESP = DECERR with RLAST high. RDATA is undefined and must be ignored.' };
+      }
+      return { cycle: t, state: 'IDLE', color: 'oklch(0.58 0.008 258)', text: 'Transaction finished with an error response. Every issued transfer must be answered — an unanswered one would leave the manager port waiting forever.' };
+    }
+    if (t === 0) return { cycle: 0, state: 'IDLE', color: 'oklch(0.58 0.008 258)', text: 'Bus idle. No channel has VALID high; both READYs may be high or low, it makes no difference.' };
+    if (w) {
+      if (t === e.awM) return { cycle: t, state: 'AW', color: C_AW, text: 'AWVALID and AWREADY both high on the manager port — AWADDR = ' + a + ' is accepted by ASIB0 in one cycle.' };
+      if (t === e.wM) return { cycle: t, state: 'W', color: C_W, text: 'WVALID with WLAST high and WREADY high — the single data beat ' + WDATA + ' is accepted. AXI4 has no WID, so write data must arrive in address order.' };
+      if (e.s && t === e.awS - 1) return { cycle: t, state: 'AW stall', color: AMBER, text: 'AWVALID held high at AMIB0 while SRAM0 holds AWREADY low — one wait cycle. VALID may not be withdrawn while it waits.' };
+      if (t === e.awS) return { cycle: t, state: 'AW', color: C_AW, text: 'AMIB0 sees AWREADY high — the address crosses to SRAM0. The manager port was already free: the ASIB0 register slice was holding the address.' };
+      if (t === e.wS) return { cycle: t, state: 'W', color: C_W, text: 'The write data beat crosses AMIB0 into SRAM0 with WLAST high, closing the burst.' };
+      if (t === e.bS) return { cycle: t, state: 'B', color: C_B, text: 'SRAM0 drives BVALID with BRESP = OKAY and AMIB0 accepts it. One response for the whole transaction.' };
+      if (t === e.bM) return { cycle: t, state: 'B', color: C_B, text: 'BVALID and BREADY high on the manager port — the write completes. B is the only acknowledgement a write gets.' };
+    } else {
+      if (t === e.arM) return { cycle: t, state: 'AR', color: C_AR, text: 'ARVALID and ARREADY both high on the manager port — ARADDR = ' + a + ' is accepted by ASIB0.' };
+      if (e.s && t === e.arS - 1) return { cycle: t, state: 'AR stall', color: AMBER, text: 'ARVALID held high at AMIB0 while SRAM0 holds ARREADY low — one wait cycle. Nothing else on the bus is affected: the other four channels are separate wires.' };
+      if (t === e.arS) return { cycle: t, state: 'AR', color: C_AR, text: 'AMIB0 sees ARREADY high — the read address crosses to SRAM0.' };
+      if (t === e.rS) return { cycle: t, state: 'R', color: C_R, text: 'SRAM0 drives RVALID with RLAST high and RRESP = OKAY. One beat, so RLAST is high on the first beat.' };
+      if (t === e.rM) return { cycle: t, state: 'R', color: C_R, text: 'RVALID and RREADY high on the manager port — RDATA = ' + this.rdata() + ' is sampled and the read completes. RID matches the ARID that was issued.' };
+    }
+    return { cycle: t, state: 'IDLE', color: 'oklch(0.58 0.008 258)', text: 'Transaction finished. The bus returns to idle until the next address is issued.' };
+  }
+
+  tick = () => {
+    const next = (this.state.t + 1) % this.events().period;
+    this.setState((s) => ({ t: next, trace: s.trace.concat([this.traceFor(next)]).slice(-14) }));
+  };
+
+  run = () => {
+    if (this.state.running) { clearInterval(this.timer); this.timer = null; this.setState({ running: false }); return; }
+    this.timer = setInterval(this.tick, 720);
+    this.setState({ running: true });
+  };
+
+  reset = () => {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    this.setState({ t: 0, running: false, trace: [] });
+  };
+
+  patch = (o) => { this.reset(); this.setState(o); };
+
+  waveGeom(rowSpec, cyc, t) {
+      /* Waveform geometry. Single-bit rows are step lines; multi-bit buses are drawn the way a
+         waveform viewer draws them: one hexagon per run of held value, with a transition
+         crossing at each change, and a dashed mid line where the bus is not driven. */
+      const CELL = 92, HI = 3, LO = 23, MID = 13, TW = 5;
+      const tint = (c) => c.replace(')', ' / 0.16)');
+      const waveRows = rowSpec.map((row) => {
+        const paths = [];
+        const texts = [];
+        const col = row.color || 'oklch(0.68 0.008 258)';
+        if (row.kind === 'clk') {
+          let d = '';
+          for (let i = 0; i < cyc; i++) {
+            const x0 = i * CELL, xm = x0 + CELL / 2, x1 = x0 + CELL;
+            d += 'M' + x0 + ',' + LO + ' L' + x0 + ',' + HI + ' L' + xm + ',' + HI + ' L' + xm + ',' + LO + ' L' + x1 + ',' + LO + ' ';
+          }
+          paths.push({ d, fill: 'none', stroke: 'oklch(0.42 0.012 258)', dash: 'none' });
+        } else if (row.kind === 'bus') {
+          let i = 0;
+          while (i < cyc) {
+            const v = row.values[i];
+            let j = i;
+            while (j + 1 < cyc && row.values[j + 1] === v) j++;
+            const x0 = i * CELL, x1 = (j + 1) * CELL;
+            if (v === '' || v === undefined || v === null) {
+              paths.push({ d: 'M' + x0 + ',' + MID + ' H' + x1, fill: 'none', stroke: 'oklch(0.34 0.01 258)', dash: '3 4' });
+            } else {
+              paths.push({
+                d: 'M' + x0 + ',' + MID + ' L' + (x0 + TW) + ',' + HI + ' H' + (x1 - TW) + ' L' + x1 + ',' + MID + ' L' + (x1 - TW) + ',' + LO + ' H' + (x0 + TW) + ' Z',
+                fill: tint(col), stroke: col, dash: 'none',
+              });
+              texts.push({ l: x0, w: x1 - x0, v, fill: col });
+            }
+            i = j + 1;
+          }
+        } else {
+          let d = '';
+          for (let i = 0; i < cyc; i++) {
+            const high = row.values[i] === 1;
+            const y = high ? HI : LO;
+            const x0 = i * CELL;
+            if (i > 0 && (row.values[i - 1] === 1) !== high) d += 'M' + x0 + ',' + (high ? LO : HI) + ' L' + x0 + ',' + y + ' ';
+            d += 'M' + x0 + ',' + y + ' H' + (x0 + CELL) + ' ';
+          }
+          paths.push({ d, fill: 'none', stroke: col, dash: 'none' });
+        }
+        return { name: row.name, color: col, w: cyc * CELL, paths, texts };
+      });
+      const waveHdr = Array.from({ length: cyc }, (_, i) => ({
+        label: 'T' + i, color: i === t ? AXI : 'oklch(0.48 0.01 258)',
+      }));
+    return { waveRows, waveHdr };
+  }
+
+  sceneL2() {
+    const st = this.state, t = st.t, e = this.events();
+    const w = st.mode === 'write';
+    const a = this.addr();
+    const br = this.branch();
+    const { o, b } = this.actL2(t);
+    const G = G2;
+    const IDLE = 'oklch(0.58 0.008 258)';
+    const amib = 'AMIB' + br;
+    const subName = br === 1 ? 'SRAM1' : 'SRAM0';
+    const reqC = w ? C_AW : C_AR, respC = w ? C_B : C_R;
+    const reqM = w ? 'aw' : 'ar', respM = w ? 'b' : 'r';
+    const anyOut = Object.keys(o).length > 0, anyBack = Object.keys(b).length > 0;
+    const out = [], back = [], labels = [], pads = [];
+    const colr = (s, base) => (s === 'err' ? RED : s === 'stall' ? AMBER : s === 'on' ? base : GREY);
+    const mark = (s, id) => 'url(#arw-' + (s === 'err' ? 'err' : s === 'stall' ? 'stall' : s === 'on' ? id : 'idle') + ')';
+    const wire = (arr, d, s, base, id) => arr.push({ d, sw: s ? 2.2 : 1.6, stroke: colr(s, base), dash: s ? '7 7' : 'none', marker: mark(s, id) });
+    const pad = (x, y, fill) => pads.push({ x: x - 2.5, y: y - 3, fill });
+
+    const cpuR = G.cpu.x + G.cpu.w, asL = G.asib.x, asR = G.asib.x + G.asib.w, splL = G.spl.x, splR = G.spl.x + G.spl.w;
+
+    const amibR = G.amib0.x + G.amib0.w;
+    const pay = { aw: a, w: WDATA, b: e.bad ? 'DECERR' : 'OKAY', ar: a, r: e.bad ? 'undefined' : this.rdata() };
+    const live = w ? ['aw', 'w', 'b'] : ['ar', 'r'];
+    const chSt = (c, span) => (live.indexOf(c.id) < 0 ? undefined : c.dir === 'back' ? b[span] : o[span]);
+    const chLab = (c, s) => (s === 'stall' ? c.name + ' ' + c.name + 'READY = 0' : s ? c.name + ' ' + pay[c.id] : c.name);
+
+    CHANS.forEach((c) => {
+      const isBack = c.dir === 'back';
+      const arr = isBack ? back : out;
+      const ty = G.trunk + G.off[c.id];
+      const s1 = chSt(c, 's1'), s2 = chSt(c, 's2');
+      wire(arr, isBack ? 'M' + asL + ',' + ty + ' H' + cpuR : 'M' + cpuR + ',' + ty + ' H' + asL, s1, c.color, c.id);
+      pad(cpuR, ty, colr(s1, c.color)); pad(asL, ty, colr(s1, c.color));
+      wire(arr, isBack ? 'M' + splL + ',' + ty + ' H' + asR : 'M' + asR + ',' + ty + ' H' + splL, s2, c.color, c.id);
+      pad(asR, ty, colr(s2, c.color)); pad(splL, ty, colr(s2, c.color));
+      labels.push({ x: cpuR + 10, y: ty - 17, label: chLab(c, s1), color: colr(s1, c.color) });
+
+      [G.amib0, G.amib1, G.dslv].forEach((blk, k) => {
+        const by = G.cy[k] + G.off[c.id];
+        const mine = k === br;
+        const sf = mine ? chSt(c, 'fan') : undefined;
+        const bc = k === 2 && isBack ? RED : c.color;
+        const bm = k === 2 && isBack ? 'err' : c.id;
+        wire(arr, isBack ? 'M' + blk.x + ',' + by + ' H' + splR : 'M' + splR + ',' + by + ' H' + blk.x, sf, bc, bm);
+        pad(splR, by, colr(sf, bc)); pad(blk.x, by, colr(sf, bc));
+        if (k === 2) {
+          if (mine && isBack) labels.push({ x: splR + 10, y: by - 17, label: chLab(c, sf), color: colr(sf, RED) });
+          return;
+        }
+        const sub = k === 0 ? G.sram0 : G.sram1;
+        const s3 = mine ? chSt(c, 's3') : undefined;
+        wire(arr, isBack ? 'M' + sub.x + ',' + by + ' H' + amibR : 'M' + amibR + ',' + by + ' H' + sub.x, s3, c.color, c.id);
+        pad(amibR, by, colr(s3, c.color)); pad(sub.x, by, colr(s3, c.color));
+        if (mine) labels.push({ x: amibR + 9, y: by - 17, label: chLab(c, s3), color: colr(s3, c.color) });
+      });
+    });
+
+
+    const held = t >= e.h1 && t <= e.b2;
+    const nodes = [
+      {
+        key: 'cpu', label: 'CPU', sub: 'Cortex-A class · AXI4 manager', range: 'one transaction in flight',
+        accent: AXI, width: G.cpu.w, height: G.cpu.h, x: G.cpu.x, y: G.cpu.y, selected: st.sel === 'cpu',
+        state: (w ? 'WRITE ' : 'READ ') + a, stateColor: anyOut || anyBack ? AXI : IDLE,
+        onClick: () => this.setState({ sel: 'cpu' }),
+        controls: [
+          { label: 'READ', on: !w, color: C_AR, onClick: () => this.patch({ mode: 'read', sel: 'cpu' }) },
+          { label: 'WRITE', on: w, color: C_AW, onClick: () => this.patch({ mode: 'write', sel: 'cpu' }) },
+        ],
+      },
+      {
+        key: 'asib0', label: 'ASIB0', sub: 'manager-facing port', range: 'register slice · decode',
+        accent: AXI, width: G.asib.w, height: G.asib.h, x: G.asib.x, y: G.asib.y, selected: st.sel === 'asib0',
+        state: o.s1 || o.s2 ? 'captured ' + a : b.s1 || b.s2 ? 'response → CPU' : held ? 'holding ' + a : 'idle',
+        stateColor: o.s1 || o.s2 ? C_AW : b.s1 || b.s2 ? respC : held ? AXI : IDLE,
+        onClick: () => this.setState({ sel: 'asib0' }), controls: [],
+      },
+      {
+        key: 'splitter', label: 'nic400-splitter', sub: 'address decode · fan-out', range: 'combinational · costs no cycle',
+        accent: AXI, width: G.spl.w, height: G.spl.h, x: G.spl.x, y: G.spl.y, selected: st.sel === 'splitter',
+        state: t >= e.h2 && t <= e.b2 ? (e.bad ? 'no match → default subordinate' : 'match → ' + amib) : 'no address to decode',
+        stateColor: t >= e.h2 && t <= e.b2 ? (e.bad ? RED : AXI) : IDLE,
+        onClick: () => this.setState({ sel: 'splitter' }), controls: [],
+      },
+    ];
+    [['amib0', 'AMIB0', G.amib0, 0, '0x8000_0000 · 256MB'], ['amib1', 'AMIB1', G.amib1, 1, '0xA000_0000 · 256MB']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const mine = k === br;
+      nodes.push({
+        key, label: lab, sub: 'subordinate-facing port', range,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state: !mine ? 'not selected'
+          : o.s3 === 'stall' ? 'waiting on READY'
+          : o.fan || o.s3 ? 'driving ' + subName
+          : b.s3 || b.fan ? 'response ← ' + subName
+          : t >= e.h2 && t <= e.b2 ? 'selected' : 'idle',
+        stateColor: !mine ? IDLE : o.s3 === 'stall' ? AMBER : o.fan || o.s3 ? reqC : b.s3 || b.fan ? respC : t >= e.h2 && t <= e.b2 ? AXI : IDLE,
+        onClick: () => this.setState({ sel: key }), controls: [],
+      });
+    });
+    nodes.push({
+      key: 'dslv', label: 'default subordinate', sub: 'inside the NIC-400', range: 'any unmatched address', rangeColor: RED,
+      accent: AXI, width: G.dslv.w, height: G.dslv.h, x: G.dslv.x, y: G.dslv.y, selected: st.sel === 'dslv',
+      state: br !== 2 ? 'nothing unmatched' : o.fan ? 'transfer accepted' : b.fan || b.s2 || b.s1 ? 'returning DECERR' : t >= e.h2 ? 'selected' : 'armed',
+      stateColor: br !== 2 ? IDLE : RED,
+      onClick: () => this.setState({ sel: 'dslv' }), controls: [],
+    });
+    [['sram0', 'SRAM0', G.sram0, 0, '0x8000_0000 – 0x8FFF_FFFF'], ['sram1', 'SRAM1', G.sram1, 1, '0xA000_0000 – 0xAFFF_FFFF']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const mine = k === br;
+      nodes.push({
+        key, label: lab, sub: 'DMC-style controller · AXI4 subordinate', range,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state: !mine ? 'not addressed'
+          : o.s3 === 'stall' ? (w ? 'AWREADY = 0' : 'ARREADY = 0')
+          : b.s3 ? (w ? 'BVALID · BRESP = OKAY' : 'RVALID · RLAST = 1')
+          : o.s3 ? (w ? 'AWREADY = 1 · WREADY = 1' : 'ARREADY = 1')
+          : 'idle',
+        stateColor: !mine ? IDLE : o.s3 === 'stall' ? AMBER : b.s3 ? respC : o.s3 ? reqC : IDLE,
+        onClick: () => this.setState({ sel: key }),
+        controls: mine && !e.bad ? [{ label: 'STALL 1 CLK', on: st.stall, color: AMBER, onClick: () => this.patch({ stall: !st.stall, sel: key }) }] : [],
+      });
+    });
+
+    const cyc = e.period;
+    const bit = (fn) => Array.from({ length: cyc }, (_, i) => (fn(i) ? 1 : 0));
+    const bus = (fn) => Array.from({ length: cyc }, (_, i) => fn(i) || '');
+    const tag = e.bad ? 'dflt' : amib;
+    const resp = e.bad ? 'DECERR' : 'OKAY';
+    const respCol = e.bad ? RED : respC;
+    const rowSpec = w
+      ? [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'AWVALID', kind: 'bit', color: C_AW, values: bit((i) => i === e.h1) },
+          { name: 'AWREADY', kind: 'bit', color: C_AW, values: bit((i) => i === e.h1) },
+          { name: 'AWADDR', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.h1 ? a : '')) },
+          { name: 'WVALID · WLAST', kind: 'bit', color: C_W, values: bit((i) => i === e.h1) },
+          { name: 'WDATA', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.h1 ? WDATA : '')) },
+          { name: 'AWADDR · ASIB0', kind: 'bus', color: VIOLET, values: bus((i) => (i > e.h1 && i <= e.h3 ? a : '')) },
+          { name: 'decode', kind: 'bus', color: e.bad ? RED : AXI, values: bus((i) => (i >= e.h2 && i <= e.h3 ? (e.bad ? 'no match' : amib) : '')) },
+          { name: 'AWVALID · ' + tag, kind: 'bit', color: C_AW, values: bit((i) => i > e.h2 && i <= e.h3) },
+          { name: 'AWREADY · ' + tag, kind: 'bit', color: e.s ? AMBER : C_AW, values: bit((i) => i === e.h3) },
+          { name: 'BVALID · ' + tag, kind: 'bit', color: respCol, values: bit((i) => i === e.b1) },
+          { name: 'BVALID', kind: 'bit', color: respCol, values: bit((i) => i === e.b3) },
+          { name: 'BREADY', kind: 'bit', color: respCol, values: bit((i) => i === e.b3) },
+          { name: 'BRESP', kind: 'bus', color: respCol, values: bus((i) => (i === e.b3 ? resp : '')) },
+        ]
+      : [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'ARVALID', kind: 'bit', color: C_AR, values: bit((i) => i === e.h1) },
+          { name: 'ARREADY', kind: 'bit', color: C_AR, values: bit((i) => i === e.h1) },
+          { name: 'ARADDR', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.h1 ? a : '')) },
+          { name: 'ARADDR · ASIB0', kind: 'bus', color: VIOLET, values: bus((i) => (i > e.h1 && i <= e.h3 ? a : '')) },
+          { name: 'decode', kind: 'bus', color: e.bad ? RED : AXI, values: bus((i) => (i >= e.h2 && i <= e.h3 ? (e.bad ? 'no match' : amib) : '')) },
+          { name: 'ARVALID · ' + tag, kind: 'bit', color: C_AR, values: bit((i) => i > e.h2 && i <= e.h3) },
+          { name: 'ARREADY · ' + tag, kind: 'bit', color: e.s ? AMBER : C_AR, values: bit((i) => i === e.h3) },
+          { name: 'RVALID · ' + tag, kind: 'bit', color: respCol, values: bit((i) => i === e.b1) },
+          { name: 'RVALID', kind: 'bit', color: respCol, values: bit((i) => i === e.b3) },
+          { name: 'RREADY', kind: 'bit', color: respCol, values: bit((i) => i === e.b3) },
+          { name: 'RLAST', kind: 'bit', color: respCol, values: bit((i) => i === e.b3) },
+          { name: 'RDATA', kind: 'bus', color: e.bad ? RED : VIOLET, values: bus((i) => (i === e.b3 ? (e.bad ? 'undefined' : this.rdata()) : '')) },
+          { name: 'RRESP', kind: 'bus', color: respCol, values: bus((i) => (i === e.b3 ? resp : '')) },
+        ];
+    const geo = this.waveGeom(rowSpec, cyc, t);
+
+    const phase = anyOut
+      ? (w ? 'AW · W' : 'AR') + (o.s3 === 'stall' ? ' wait' : '')
+      : anyBack ? (w ? 'B' : 'R') + (e.bad ? ' DECERR' : '') : 'IDLE';
+
+    return {
+      cw: G.w, ch: G.h,
+      topoLabel: 'TOPOLOGY · INSIDE THE NIC-400 · click a block',
+      canvasNote: 'Five channels per interface, as at L1: AW, W and AR run out, B and R come back. A channel that takes no part in this transfer stays grey and never moves — on a read, AW, W and B sit still all the way through. AW and its single W beat are issued in the same cycle here.',
+      nodes, outEdges: out, backEdges: back, edgeLabels: labels, pads,
+      crumbs: [
+        { label: 'CPU', color: AXI, active: anyOut && !!o.s1 },
+        { label: 'ASIB0', color: AXI, active: !!(o.s1 || o.s2 || b.s1 || b.s2) },
+        { label: 'splitter', color: e.bad ? RED : AXI, active: t >= e.h2 && t <= e.b2 },
+        { label: e.bad ? 'default subordinate' : amib, color: e.bad ? RED : AXI, active: !!(o.fan || o.s3 || b.fan || b.s3) },
+        { label: e.bad ? 'DECERR' : subName, color: e.bad ? RED : respC, active: e.bad ? t >= e.b1 : !!(o.s3 || b.s3) },
+      ],
+      statusLine: 'L2 · AXI4',
+      statusNote: (w ? 'WRITE ' : 'READ ') + a + (e.bad ? ' → no region · DECERR' : ' → ' + amib + ' → ' + subName),
+      clock: { cycle: t, phase, running: st.running, onStep: this.tick, onRun: this.run, onReset: this.reset },
+      phaseLine: 'T' + t + ' · ' + phase + (e.s ? ' · stall armed' : ''),
+      decodeText: t === 0
+        ? 'Nothing issued. The splitter has two regions wired into it — 0x8000_0000 · 256MB → AMIB0 and 0xA000_0000 · 256MB → AMIB1 — and everything else goes to the default subordinate.'
+        : e.bad
+        ? a + ' matches neither region: it sits above AMIB0\u2019s 256MB window and below AMIB1\u2019s. The splitter selects the default subordinate, which returns DECERR on ' + (w ? 'BRESP' : 'RRESP') + '.'
+        : (w ? 'AWADDR ' : 'ARADDR ') + a + ' matches ' + amib + ' (' + (br === 1 ? '0xA000_0000 · 256MB' : '0x8000_0000 · 256MB') + ') → ' + subName + '. Regions may not overlap, so exactly one branch can match.',
+      waveScope: 'MANAGER PORT, DECODE AND ' + (e.bad ? 'DEFAULT SUBORDINATE' : amib),
+      waveRows: geo.waveRows, waveHdr: geo.waveHdr,
+      waveRev: (w ? 'WRITE' : 'READ') + ' · ' + (e.bad ? 'DECERR' : subName),
+    };
+  }
+
+  sceneL3() {
+    const st = this.state, t = st.t, e = this.events(), G = G3;
+    const IDLE = 'oklch(0.58 0.008 258)';
+    const { out: oM, back: bM } = this.actL3(t);
+    const outE = [], backE = [], labels = [], pads = [];
+    const colr = (s, base) => (s === 'err' ? RED : s === 'stall' ? AMBER : s === 'on' ? base : GREY);
+    const mark = (s, id) => 'url(#arw-' + (s === 'err' ? 'err' : s === 'stall' ? 'stall' : s === 'on' ? id : 'idle') + ')';
+    const wire = (arr, d, s, base, id) => arr.push({ d, sw: s ? 2.2 : 1.6, stroke: colr(s, base), dash: s ? '7 7' : 'none', marker: mark(s, id) });
+    const pad = (x, y, fill) => pads.push({ x: x - 2.5, y: y - 3, fill });
+    const DL = G.amib0.x, DR = G.amib0.x + G.amib0.w;
+    const dName = (k) => (k === 2 ? 'default subordinate' : 'AMIB' + k);
+    const sName = (k) => (k === 2 ? 'the default subordinate' : k === 1 ? 'SRAM1' : 'SRAM0');
+    const mans = [
+      { key: 'cpu', i: 0, name: 'CPU', asibKey: 'asib0', asib: 'ASIB0', splKey: 'splitter', blk: G.cpu, ab: G.asib0, sp: G.spl0, cy: G.mcy[0], w: st.mode === 'write', r: this.mReg('cpu'), br: this.mBranch('cpu'), o: oM.cpu, b: bM.cpu, ev: e.cpu, qos: st.qosCpu },
+      { key: 'dma330', i: 1, name: 'DMA-330', asibKey: 'asib1', asib: 'ASIB1', splKey: 'splitter1', blk: G.dma, ab: G.asib1, sp: G.spl1, cy: G.mcy[1], w: st.dmaMode === 'write', r: this.mReg('dma'), br: this.mBranch('dma'), o: oM.dma, b: bM.dma, ev: e.dma, qos: st.qosDma },
+    ];
+    const reqC = (m) => (m.w ? C_AW : C_AR), respC = (m) => (m.w ? C_B : C_R);
+    const reqId = (m) => (m.w ? 'aw' : 'ar'), respId = (m) => (m.w ? 'b' : 'r');
+    const reqLab = (m, s) => (s === 'stall' ? 'held · waiting for grant' : s ? (m.w ? 'AW · W ' : 'AR ') + m.r.addr : m.w ? 'AW · W' : 'AR');
+    const respLab = (m, s) => (s === 'err' ? (m.w ? 'B DECERR' : 'R DECERR') : s ? (m.w ? 'B OKAY' : 'R ' + m.r.value) : m.w ? 'B' : 'R');
+
+    mans.forEach((m) => {
+      const oy = m.cy - 9, by = m.cy + 9;
+      const mR = m.blk.x + m.blk.w, aL = m.ab.x, aR = m.ab.x + m.ab.w, sL = m.sp.x, sR = m.sp.x + m.sp.w;
+      wire(outE, 'M' + mR + ',' + oy + ' H' + aL, m.o.s1, reqC(m), reqId(m));
+      pad(mR, oy, colr(m.o.s1, reqC(m))); pad(aL, oy, colr(m.o.s1, reqC(m)));
+      wire(backE, 'M' + aL + ',' + by + ' H' + mR, m.b.s1, respC(m), respId(m));
+      pad(aL, by, colr(m.b.s1, respC(m))); pad(mR, by, colr(m.b.s1, respC(m)));
+      labels.push({ x: mR + 9, y: oy - 17, label: reqLab(m, m.o.s1), color: colr(m.o.s1, reqC(m)) });
+      labels.push({ x: mR + 9, y: by + 5, label: respLab(m, m.b.s1), color: colr(m.b.s1, respC(m)) });
+      wire(outE, 'M' + aR + ',' + oy + ' H' + sL, m.o.s2, reqC(m), reqId(m));
+      pad(aR, oy, colr(m.o.s2, reqC(m))); pad(sL, oy, colr(m.o.s2, reqC(m)));
+      wire(backE, 'M' + sL + ',' + by + ' H' + aR, m.b.s2, respC(m), respId(m));
+      pad(sL, by, colr(m.b.s2, respC(m))); pad(aR, by, colr(m.b.s2, respC(m)));
+      /* The widened ID lives only on this span: appended at the ASIB, stripped on the way back. */
+      if (m.o.s2) labels.push({ x: aR + 7, y: oy - 17, label: '+ID[4]=' + m.i, color: AMBER });
+      if (m.b.s2) labels.push({ x: aR + 7, y: by + 5, label: '−ID[4]', color: AMBER });
+      for (let k = 0; k < 3; k++) {
+        const mine = k === m.br;
+        const so = mine ? m.o.fan : undefined, sb = mine ? m.b.fan : undefined;
+        const oLane = G.lane + G.step * (m.i * 6 + k), bLane = G.lane + G.step * (m.i * 6 + 3 + k);
+        const sPo = m.cy + [-30, -20, -10][k], sPb = m.cy + [10, 20, 30][k];
+        const dPo = G.dcy[k] + (m.i === 0 ? -24 : 8), dPb = G.dcy[k] + (m.i === 0 ? -8 : 24);
+        const bc = k === 2 ? RED : respC(m), bi = k === 2 ? 'err' : respId(m);
+        wire(outE, 'M' + sR + ',' + sPo + ' H' + oLane + ' V' + dPo + ' H' + DL, so, reqC(m), reqId(m));
+        pad(sR, sPo, colr(so, reqC(m))); pad(DL, dPo, colr(so, reqC(m)));
+        wire(backE, 'M' + DL + ',' + dPb + ' H' + bLane + ' V' + sPb + ' H' + sR, sb, bc, bi);
+        pad(DL, dPb, colr(sb, bc)); pad(sR, sPb, colr(sb, bc));
+        if (mine && so === 'stall') labels.push({ x: oLane + 8, y: G.dcy[k] + (m.i === 0 ? -44 : 22), label: m.asib + ' held', color: AMBER });
+      }
+    });
+
+    [0, 1].forEach((k) => {
+      const amib = k === 0 ? G.amib0 : G.amib1, sram = k === 0 ? G.sram0 : G.sram1;
+      const own = mans.filter((m) => m.br === k).find((m) => m.o.s3 || m.b.s3) || mans.find((m) => m.br === k);
+      const so = own && own.br === k ? own.o.s3 : undefined, sb = own && own.br === k ? own.b.s3 : undefined;
+      const rc = own ? reqC(own) : C_AR, pc = own ? respC(own) : C_R;
+      const oy = G.dcy[k] - 9, by = G.dcy[k] + 9;
+      wire(outE, 'M' + DR + ',' + oy + ' H' + sram.x, so, rc, own ? reqId(own) : 'ar');
+      pad(DR, oy, colr(so, rc)); pad(sram.x, oy, colr(so, rc));
+      wire(backE, 'M' + sram.x + ',' + by + ' H' + DR, sb, pc, own ? respId(own) : 'r');
+      pad(sram.x, by, colr(sb, pc)); pad(DR, by, colr(sb, pc));
+      if (own) {
+        labels.push({ x: DR + 8, y: oy - 17, label: reqLab(own, so), color: colr(so, rc) });
+        labels.push({ x: DR + 8, y: by + 5, label: respLab(own, sb), color: colr(sb, pc) });
+      }
+    });
+
+    const policyLabel = st.policy === 'qos' ? 'QoS priority' : 'round-robin';
+    const winM = mans.find((m) => (e.win === 'dma' ? m.i === 1 : m.i === 0));
+    const loseM = mans.find((m) => m !== winM);
+    const anyLive = mans.some((m) => Object.keys(m.o).length || Object.keys(m.b).length);
+
+    const nodes = [];
+    mans.forEach((m) => {
+      const live = Object.keys(m.o).length || Object.keys(m.b).length;
+      nodes.push({
+        key: m.key, label: m.name, sub: m.i === 0 ? 'Cortex-A class · AXI4 manager' : 'DMA controller · AXI4 manager',
+        range: 'AxQOS = ' + m.qos, rangeColor: m.qos === 12 ? AMBER : undefined,
+        accent: AXI, width: m.blk.w, height: m.blk.h, x: m.blk.x, y: m.blk.y, selected: st.sel === m.key,
+        state: (m.w ? 'WRITE ' : 'READ ') + m.r.addr, stateColor: live ? AXI : IDLE,
+        onClick: () => this.setState({ sel: m.key }),
+        controls: [
+          { label: 'READ', on: !m.w, color: C_AR, onClick: () => this.patch(m.i === 0 ? { mode: 'read', sel: m.key } : { dmaMode: 'read', sel: m.key }) },
+          { label: 'WRITE', on: m.w, color: C_AW, onClick: () => this.patch(m.i === 0 ? { mode: 'write', sel: m.key } : { dmaMode: 'write', sel: m.key }) },
+          { label: 'AxQOS 12', on: m.qos === 12, color: AMBER, onClick: () => this.patch(m.i === 0 ? { qosCpu: st.qosCpu === 12 ? 4 : 12, sel: m.key } : { qosDma: st.qosDma === 12 ? 8 : 12, sel: m.key }) },
+        ],
+      });
+    });
+    mans.forEach((m) => {
+      nodes.push({
+        key: m.asibKey, label: m.asib, sub: 'manager-facing port',
+        range: (m.w ? 'AWID' : 'ARID') + '[3:0] → [4:0] · appends ' + m.i, rangeColor: AMBER,
+        accent: AXI, width: m.ab.w, height: m.ab.h, x: m.ab.x, y: m.ab.y, selected: st.sel === m.asibKey,
+        state: m.o.s1 || m.o.s2 ? 'captured ' + m.r.addr : m.b.s1 || m.b.s2 ? 'response → ' + m.name : t >= m.ev.h1 && t <= m.ev.b2 ? 'holding ' + m.r.addr : 'idle',
+        stateColor: m.o.s1 || m.o.s2 ? reqC(m) : m.b.s1 || m.b.s2 ? respC(m) : t >= m.ev.h1 && t <= m.ev.b2 ? AXI : IDLE,
+        onClick: () => this.setState({ sel: m.asibKey }), controls: [],
+      });
+      nodes.push({
+        key: m.splKey, label: 'splitter', sub: m.asib + ' decode · fan-out', range: 'combinational',
+        accent: AXI, width: m.sp.w, height: m.sp.h, x: m.sp.x, y: m.sp.y, selected: st.sel === m.splKey,
+        state: t >= e.h2 && t <= m.ev.b2 ? (m.br === 2 ? 'no match' : 'match → ' + dName(m.br)) : 'nothing to decode',
+        stateColor: t >= e.h2 && t <= m.ev.b2 ? (m.br === 2 ? RED : AXI) : IDLE,
+        onClick: () => this.setState({ sel: m.splKey }), controls: [],
+      });
+    });
+    [['amib0', 'AMIB0', G.amib0, 0, '0x8000_0000 · 256MB'], ['amib1', 'AMIB1', G.amib1, 1, '0xA000_0000 · 256MB'], ['dslv', 'default subordinate', G.dslv, 2, 'any unmatched address']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const users = mans.filter((m) => m.br === k);
+      let state = 'no request', color = IDLE;
+      if (users.length === 2) {
+        if (t === 0 || t > loseM.ev.b3) { state = 'two managers mapped here'; color = IDLE; }
+        else if (t < e.h2) { state = 'two requests pending'; color = AMBER; }
+        else if (t <= winM.ev.b3) { state = 'grant → ' + winM.asib; color = k === 2 ? RED : AXI; }
+        else { state = 'grant → ' + loseM.asib; color = k === 2 ? RED : AXI; }
+      } else if (users.length === 1) {
+        const m = users[0];
+        state = m.o.s3 ? 'driving ' + sName(k) : m.b.s3 || m.b.fan ? 'response ← ' + (k === 2 ? 'itself' : sName(k)) : m.o.fan ? 'transfer accepted' : t >= e.h2 && t <= m.ev.b2 ? 'granted ' + m.asib : 'idle';
+        color = t >= e.h2 && t <= m.ev.b2 ? (k === 2 ? RED : AXI) : IDLE;
+      }
+      nodes.push({
+        key, label: lab, sub: k === 2 ? 'inside the NIC-400 · arbiter' : 'subordinate-facing port · arbiter',
+        range: range, rangeColor: k === 2 ? RED : undefined,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state, stateColor: color,
+        onClick: () => this.setState({ sel: key }),
+        controls: [
+          { label: st.policy === 'rr' ? 'ROUND-ROBIN' : 'QOS PRIORITY', on: true, color: st.policy === 'rr' ? AXI : AMBER, onClick: () => this.patch({ policy: st.policy === 'rr' ? 'qos' : 'rr', sel: key }) },
+        ],
+      });
+    });
+    [['sram0', 'SRAM0', G.sram0, 0, '0x8000_0000 – 0x8FFF_FFFF'], ['sram1', 'SRAM1', G.sram1, 1, '0xA000_0000 – 0xAFFF_FFFF']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const own = mans.filter((m) => m.br === k).find((m) => m.o.s3 || m.b.s3);
+      nodes.push({
+        key, label: lab, sub: 'DMC-style controller · AXI4 subordinate', range,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state: !own ? (mans.some((m) => m.br === k) ? 'idle' : 'not addressed')
+          : own.b.s3 ? (own.w ? 'BVALID · BRESP = OKAY' : 'RVALID · RLAST = 1')
+          : (own.w ? 'AWREADY = 1 · WREADY = 1' : 'ARREADY = 1'),
+        stateColor: !own ? IDLE : own.b.s3 ? respC(own) : reqC(own),
+        onClick: () => this.setState({ sel: key }), controls: [],
+      });
+    });
+
+    const cyc = e.period;
+    const bit = (f) => Array.from({ length: cyc }, (_, i) => (f(i) ? 1 : 0));
+    const bus = (f) => Array.from({ length: cyc }, (_, i) => f(i) || '');
+    const rowFor = (m) => {
+      const ax = m.w ? 'AW' : 'AR', rx = m.w ? 'B' : 'R';
+      const rc = m.br === 2 ? RED : respC(m);
+      return [
+        { name: ax + 'VALID · ' + m.name, kind: 'bit', color: reqC(m), values: bit((i) => i === m.ev.h1) },
+        { name: ax + 'READY · ' + m.asib, kind: 'bit', color: reqC(m), values: bit((i) => i === m.ev.h1) },
+        { name: ax + 'ADDR · ' + m.name, kind: 'bus', color: VIOLET, values: bus((i) => (i >= m.ev.h1 && i <= m.ev.h3 ? m.r.addr : '')) },
+        { name: ax + 'VALID · ' + dName(m.br), kind: 'bit', color: e.contend && e.win !== (m.i === 0 ? 'cpu' : 'dma') ? AMBER : reqC(m), values: bit((i) => i > e.h2 && i <= m.ev.h3) },
+        { name: rx + 'RESP · ' + m.name, kind: 'bus', color: rc, values: bus((i) => (i === m.ev.b3 ? (m.br === 2 ? 'DECERR' : 'OKAY') : '')) },
+      ];
+    };
+    const rowSpec = [{ name: 'ACLK', kind: 'clk' }]
+      .concat(rowFor(mans[0]))
+      .concat(e.contend ? [{ name: 'grant · ' + dName(mans[0].br), kind: 'bus', color: AMBER,
+        values: bus((i) => (i >= e.h2 && i <= winM.ev.h3 ? winM.asib : i === loseM.ev.h3 ? loseM.asib : '')) }] : [])
+      .concat(rowFor(mans[1]));
+    const geo = this.waveGeom(rowSpec, cyc, t);
+
+    const phase = t === 0 || t > loseM.ev.b3 ? 'IDLE'
+      : t <= e.h2 ? 'ADDRESS'
+      : e.contend && t === winM.ev.h3 ? 'GRANT ' + winM.asib
+      : t >= winM.ev.b1 ? 'RESPONSE' : 'ADDRESS';
+
+    return {
+      cw: G.w, ch: G.h,
+      topoLabel: 'TOPOLOGY · TWO MANAGERS, ONE CROSSBAR · click a block',
+      canvasNote: 'Channels are bundled at this level only: one wire out (AW, W, AR) and one wire back (B, R) per interface, because the interesting thing here is which manager owns the port, not which channel is moving. The waveform below still shows the channels one at a time. Amber is a request that has been made and not yet granted. Watch the ID on the ASIB-to-splitter span: B and R carry no address, so each ASIB appends its own port number to AxID on the way in \u2014 4 bits become 5 \u2014 and strips that bit off the response to pick the return path. The managers never see it. L4 puts the lower 4 bits to work.',
+      nodes, outEdges: outE, backEdges: backE, edgeLabels: labels, pads,
+      crumbs: [
+        { label: 'CPU', color: AXI, active: !!(mans[0].o.s1 || mans[0].o.s2) },
+        { label: 'DMA-330', color: AXI, active: !!(mans[1].o.s1 || mans[1].o.s2) },
+        { label: e.contend ? 'arbiter · ' + dName(mans[0].br) : 'two destinations', color: e.contend ? AMBER : AXI, active: t >= e.h2 && t <= loseM.ev.b2 },
+        { label: e.contend ? 'grant ' + winM.asib : 'parallel', color: AXI, active: t >= e.h2 && t <= loseM.ev.b3 },
+      ],
+      statusLine: 'L3 · AXI4',
+      statusNote: 'CPU ' + (mans[0].w ? 'WRITE ' : 'READ ') + mans[0].r.addr + ' · DMA-330 ' + (mans[1].w ? 'WRITE ' : 'READ ') + mans[1].r.addr + (e.contend ? ' → both on ' + dName(mans[0].br) : ' → no contention'),
+      clock: { cycle: t, phase, running: st.running, onStep: this.tick, onRun: this.run, onReset: this.reset },
+      phaseLine: 'T' + t + ' · ' + phase + ' · ' + policyLabel,
+      decodeText: e.contend
+        ? 'Both managers decode to ' + dName(mans[0].br) + '. Policy is ' + policyLabel + ', so the grant goes to ' + winM.asib + ' — ' + e.why + '. ' + loseM.asib + ' holds its address one cycle and goes second; the whole transfer is granted, never interleaved.'
+        : 'CPU → ' + dName(mans[0].br) + ', DMA-330 → ' + dName(mans[1].br) + '. Two destinations means two arbiters with one request each, so both transfers run in the same cycles and complete independently.',
+      waveScope: 'BOTH MANAGER PORTS' + (e.contend ? ' AND THE GRANT' : ''),
+      waveRows: geo.waveRows, waveHdr: geo.waveHdr,
+      waveRev: (e.contend ? 'CONTENDED · ' + policyLabel.toUpperCase() : 'PARALLEL') + ' · SINGLE BEAT',
+      hasWho: true,
+      whoChips: mans.map((m) => ({
+        id: m.i === 0 ? 'cpu' : 'dma', label: m.name + ' targets', addr: m.r.addr,
+        bg: st.who === (m.i === 0 ? 'cpu' : 'dma') ? 'color-mix(in oklch, oklch(0.62 0.19 235) 14%, oklch(0.20 0.011 258))' : 'oklch(0.20 0.011 258)',
+        border: st.who === (m.i === 0 ? 'cpu' : 'dma') ? 'color-mix(in oklch, oklch(0.62 0.19 235) 44%, transparent)' : 'oklch(0.26 0.011 258)',
+        color: st.who === (m.i === 0 ? 'cpu' : 'dma') ? AXI : 'oklch(0.66 0.008 258)',
+        onClick: () => this.setState({ who: m.i === 0 ? 'cpu' : 'dma' }),
+      })),
+      regRows: REGS.map((r) => {
+        const active = (st.who === 'dma' ? st.dmaTarget : st.target) === r.id;
+        return Object.assign({}, r, {
+          valueColor: r.valueColor || VIOLET,
+          dev: r.dev + (st.target === r.id ? ' · CPU' : '') + (st.dmaTarget === r.id ? ' · DMA' : ''),
+          bg: active ? 'color-mix(in oklch, oklch(0.62 0.19 235) 12%, oklch(0.20 0.011 258))' : 'oklch(0.20 0.011 258)',
+          border: active ? 'color-mix(in oklch, oklch(0.62 0.19 235) 40%, transparent)' : 'oklch(0.26 0.011 258)',
+          onClick: () => this.patch(st.who === 'dma' ? { dmaTarget: r.id } : { target: r.id }),
+        });
+      }),
+    };
+  }
+
+  sceneL4() {
+    const st = this.state, t = st.t, G = G4;
+    const IDLE = 'oklch(0.58 0.008 258)';
+    const { o, b, s } = this.actL4(t);
+    const w = s.w;
+    const reqC = w ? C_AW : C_AR, respC = w ? C_B : C_R;
+    const reqId = w ? 'aw' : 'ar', respId = w ? 'b' : 'r';
+    const dataC = w ? C_W : C_R;
+    const outE = [], backE = [], labels = [], pads = [];
+    const colr = (v, base) => (v ? base : GREY);
+    const wire = (arr, d, v, base, id) => arr.push({ d, sw: v ? 2.2 : 1.6, stroke: colr(v, base), dash: v ? '7 7' : 'none', marker: 'url(#arw-' + (v ? id : 'idle') + ')' });
+    const pad = (x, y, fill) => pads.push({ x: x - 2.5, y: y - 3, fill });
+    const cpuR = G.cpu.x + G.cpu.w, aL = G.asib.x, aR = G.asib.x + G.asib.w, sL = G.spl.x, sR = G.spl.x + G.spl.w;
+    const trunkO = G.trunk - 9, trunkB = G.trunk + 9;
+    /* Which ID field a span is carrying right now, by channel. */
+    const idLab = (v, wr, tight) => (v.kind === 'addr' ? (wr ? 'AWID = ' : 'ARID = ') + v.id
+      : v.kind === 'resp' ? 'BID = ' + v.id
+      /* AXI4 has no WID: the beat belongs to an ID, it does not carry one. */
+      : wr ? (tight ? 'ID' + v.id : 'beat · ID' + v.id)
+      : 'RID = ' + v.id);
+    const outC = (v) => (v && v.kind === 'data' ? dataC : reqC);
+    const backC = (v) => (v && v.kind === 'data' ? C_R : C_B);
+    const outI = (v) => (v && v.kind === 'data' ? (w ? 'w' : 'r') : reqId);
+    const backI = (v) => (v && v.kind === 'data' ? 'r' : 'b');
+
+    /* Manager port: the channels this transfer actually uses get their own wire, because the
+       whole level is about what rides on them. The rest stay as one grey idle bundle. */
+    const mp = w
+      ? [
+          { y: 250, back: false, name: 'AW', color: C_AW, mk: 'aw', live: o.s1 && o.s1.kind === 'addr' ? o.s1 : null, tag: 'AWID' },
+          { y: 286, back: false, name: 'W', color: C_W, mk: 'w', live: o.s1 && o.s1.kind === 'data' ? o.s1 : null, tag: null },
+          { y: 322, back: true, name: 'B', color: C_B, mk: 'b', live: b.s1 && b.s1.kind === 'resp' ? b.s1 : null, tag: 'BID' },
+        ]
+      : [
+          { y: 258, back: false, name: 'AR', color: C_AR, mk: 'ar', live: o.s1 && o.s1.kind === 'addr' ? o.s1 : null, tag: 'ARID' },
+          { y: 318, back: true, name: 'R', color: C_R, mk: 'r', live: b.s1 || null, tag: 'RID' },
+        ];
+    mp.forEach((c) => {
+      const on = !!c.live;
+      wire(c.back ? backE : outE,
+        c.back ? 'M' + aL + ',' + c.y + ' H' + cpuR : 'M' + cpuR + ',' + c.y + ' H' + aL,
+        c.live, c.color, c.mk);
+      pad(cpuR, c.y, colr(on, c.color)); pad(aL, c.y, colr(on, c.color));
+      labels.push({ x: cpuR + 10, y: c.y - 17, label: c.name, color: colr(on, c.color) });
+      if (on) labels.push({
+        x: cpuR + 10, y: c.y + 5,
+        label: c.tag ? c.tag + ' = ' + c.live.id : 'beat · ID' + c.live.id,
+        color: idC(c.live.id),
+      });
+    });
+    /* Parked channels, not a wire: this group mixes directions (B returns on a read, R on a
+       write), so it carries no arrowhead. A pad at each end still terminates it on both edges. */
+    const idleY = 368;
+    outE.push({ d: 'M' + cpuR + ',' + idleY + ' H' + aL, sw: 1.6, stroke: GREY, dash: 'none', marker: 'none' });
+    pad(cpuR, idleY, GREY); pad(aL, idleY, GREY);
+    labels.push({ x: cpuR + 10, y: idleY - 17, label: w ? 'AR · R idle' : 'AW · W · B idle', color: GREY });
+    wire(outE, 'M' + aR + ',' + trunkO + ' H' + sL, o.s2, outC(o.s2), outI(o.s2));
+    pad(aR, trunkO, colr(o.s2, outC(o.s2))); pad(sL, trunkO, colr(o.s2, outC(o.s2)));
+    wire(backE, 'M' + sL + ',' + trunkB + ' H' + aR, b.s2, backC(b.s2), backI(b.s2));
+    pad(sL, trunkB, colr(b.s2, backC(b.s2))); pad(aR, trunkB, colr(b.s2, backC(b.s2)));
+    /* The tag is address-channel payload, so it is on every hop — the ASIB forwards it, it
+       does not hold it. Badge each span or the ID reads as appearing and disappearing. */
+    if (o.s2) labels.push({ x: aR + 8, y: trunkO - 17, label: idLab(o.s2, w), color: idC(o.s2.id) });
+    if (b.s2) labels.push({ x: aR + 8, y: trunkB + 5, label: idLab(b.s2, w), color: idC(b.s2.id) });
+
+    [0, 1, 2].forEach((k) => {
+      const dest = k === 0 ? G.amib0 : k === 1 ? G.amib1 : G.dslv;
+      const oy = G.dcy[k] - 9, by = G.dcy[k] + 9;
+      const fo = o.fan[k], fb = b.fan[k];
+      wire(outE, 'M' + sR + ',' + oy + ' H' + dest.x, fo, outC(fo), outI(fo));
+      pad(sR, oy, colr(fo, outC(fo))); pad(dest.x, oy, colr(fo, outC(fo)));
+      wire(backE, 'M' + dest.x + ',' + by + ' H' + sR, fb, backC(fb), backI(fb));
+      pad(dest.x, by, colr(fb, backC(fb))); pad(sR, by, colr(fb, backC(fb)));
+      /* 68px of span here, so the write-data form drops its 'beat · ' prefix to fit. */
+      if (fo) labels.push({ x: sR + 7, y: oy - 17, label: idLab(fo, w, true), color: idC(fo.id) });
+      if (fb) labels.push({ x: sR + 7, y: by + 5, label: idLab(fb, w, true), color: idC(fb.id) });
+      if (k === 2) return;
+      const sram = k === 0 ? G.sram0 : G.sram1;
+      const dR = dest.x + dest.w;
+      const so = o.s3[k], sb = b.s3[k];
+      wire(outE, 'M' + dR + ',' + oy + ' H' + sram.x, so, outC(so), outI(so));
+      pad(dR, oy, colr(so, outC(so))); pad(sram.x, oy, colr(so, outC(so)));
+      wire(backE, 'M' + sram.x + ',' + by + ' H' + dR, sb, backC(sb), backI(sb));
+      pad(sram.x, by, colr(sb, backC(sb))); pad(dR, by, colr(sb, backC(sb)));
+      labels.push({ x: dR + 9, y: oy - 17, label: so ? so.lab : w ? 'AW · W' : 'AR', color: colr(so, outC(so)) });
+      labels.push({ x: dR + 9, y: by + 5, label: sb ? sb.lab : w ? 'B' : 'R', color: colr(sb, backC(sb)) });
+    });
+
+    const gotOf = (id) => (w
+      ? s.seq.filter((x) => x.id === id && x.c <= t).length
+      : s.seq.filter((x) => x.id === id && x.c + 2 <= t).length);
+    const doneOf = (id) => (w ? s.resp[id] <= t && t > 0 : gotOf(id) === (id === 0 ? s.lenA : s.lenB));
+    const lenOf = (id) => (id === 0 ? s.lenA : s.lenB);
+    const anyLive = !!(o.s1 || o.s2 || b.s1 || b.s2 || o.fan[0] || o.fan[1] || b.fan[0] || b.fan[1]);
+    const issued = t >= 1;
+
+    const nodes = [
+      {
+        key: 'cpu', label: 'CPU', sub: 'Cortex-A class · AXI4 manager', range: '2 outstanding · ID width 4',
+        accent: AXI, width: G.cpu.w, height: G.cpu.h, x: G.cpu.x, y: G.cpu.y, selected: st.sel === 'cpu',
+        state: (w ? 'WRITE' : 'READ') + ' ID0 ' + s.lenA + ' beats · ID1 ' + s.lenB + ' beats', stateColor: anyLive ? AXI : IDLE,
+        onClick: () => this.setState({ sel: 'cpu' }),
+        controls: [
+          { label: 'READ', on: !w, color: C_AR, onClick: () => this.patch({ mode: 'read', sel: 'cpu' }) },
+          { label: 'WRITE', on: w, color: C_AW, onClick: () => this.patch({ mode: 'write', sel: 'cpu' }) },
+          { label: 'LEN ' + s.lenA + ' · ' + s.lenB, on: st.lenSwap, color: VIOLET, onClick: () => this.patch({ lenSwap: !st.lenSwap, sel: 'cpu' }) },
+          { label: w ? 'BID OUT OF ORDER' : 'INTERLEAVE RID', on: st.ooo, color: AMBER, onClick: () => this.patch({ ooo: !st.ooo, sel: 'cpu' }) },
+        ],
+      },
+      {
+        key: 'asib0', label: 'ASIB0', sub: 'manager-facing port',
+        range: 'AxID forwarded unchanged', rangeColor: AMBER,
+        accent: AXI, width: G.asib.w, height: G.asib.h, x: G.asib.x, y: G.asib.y, selected: st.sel === 'asib0',
+        state: !issued ? 'no transaction' : 'ID0 ' + gotOf(0) + '/' + s.lenA + ' · ID1 ' + gotOf(1) + '/' + s.lenB,
+        stateColor: !issued ? IDLE : doneOf(0) && doneOf(1) ? C_B : AXI,
+        onClick: () => this.setState({ sel: 'asib0' }), controls: [],
+      },
+      {
+        key: 'splitter', label: 'nic400-splitter', sub: 'address decode · fan-out', range: 'combinational',
+        accent: AXI, width: G.spl.w, height: G.spl.h, x: G.spl.x, y: G.spl.y, selected: st.sel === 'splitter',
+        state: issued ? 'ID0 → AMIB0 · ID1 → AMIB1' : 'nothing to decode',
+        stateColor: issued ? AXI : IDLE,
+        onClick: () => this.setState({ sel: 'splitter' }), controls: [],
+      },
+    ];
+    [['amib0', 'AMIB0', G.amib0, 0, 'reorder depth 2'], ['amib1', 'AMIB1', G.amib1, 1, 'reorder depth 2']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const live = o.fan[k] || b.fan[k] || o.s3[k] || b.s3[k];
+      nodes.push({
+        key, label: lab, sub: 'subordinate-facing port', range,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state: live ? (live.kind === 'addr' ? 'address · ID' + k : live.kind === 'resp' ? 'B · BID = ' + k : 'beat ' + gotOf(k) + ' of ' + lenOf(k)) : doneOf(k) ? 'ID' + k + ' complete' : issued ? 'ID' + k + ' · ' + (lenOf(k) - gotOf(k)) + ' beats owed' : 'idle',
+        stateColor: live ? (live.kind === 'addr' ? reqC : live.kind === 'resp' ? C_B : dataC) : doneOf(k) ? C_B : issued ? AXI : IDLE,
+        onClick: () => this.setState({ sel: key }), controls: [],
+      });
+    });
+    nodes.push({
+      key: 'dslv', label: 'default subordinate', sub: 'inside the NIC-400', range: 'any unmatched address', rangeColor: RED,
+      accent: AXI, width: G.dslv.w, height: G.dslv.h, x: G.dslv.x, y: G.dslv.y, selected: st.sel === 'dslv',
+      state: 'both addresses matched', stateColor: IDLE,
+      onClick: () => this.setState({ sel: 'dslv' }), controls: [],
+    });
+    [['sram0', 'SRAM0', G.sram0, 0, '0x8000_0000 – 0x8FFF_FFFF'], ['sram1', 'SRAM1', G.sram1, 1, '0xA000_0000 – 0xAFFF_FFFF']].forEach((row) => {
+      const key = row[0], lab = row[1], g = row[2], k = row[3], range = row[4];
+      const live = o.s3[k] || b.s3[k];
+      nodes.push({
+        key, label: lab, sub: 'DMC-style controller · AXI4 subordinate', range,
+        accent: AXI, width: g.w, height: g.h, x: g.x, y: g.y, selected: st.sel === key,
+        state: live ? (live.kind === 'addr' ? (w ? 'AWREADY = 1' : 'ARREADY = 1') : live.kind === 'resp' ? 'BVALID · BID = ' + k : w ? 'WREADY = 1 · beat ' + gotOf(k) : 'RVALID · RID = ' + k)
+          : doneOf(k) ? 'owes nothing · ID' + k + ' complete' : issued ? 'owes ID' + k + ' · ' + (lenOf(k) - gotOf(k)) + ' of ' + lenOf(k) + ' beats' : 'idle',
+        stateColor: live ? (live.kind === 'addr' ? reqC : live.kind === 'resp' ? C_B : dataC) : doneOf(k) ? C_B : issued ? AXI : IDLE,
+        onClick: () => this.setState({ sel: key }), controls: [],
+      });
+    });
+
+    const cyc = s.period;
+    const bit = (f) => Array.from({ length: cyc }, (_, i) => (f(i) ? 1 : 0));
+    const bus = (f) => Array.from({ length: cyc }, (_, i) => f(i) || '');
+    const addrAt = (i) => (i === s.A.h1 ? s.A.addr : i === s.B.h1 ? s.B.addr : '');
+    const idAt = (i) => (i === s.A.h1 ? '0' : i === s.B.h1 ? '1' : '');
+    const lenAt = (i) => (i === s.A.h1 ? s.lenA - 1 + ' · ' + s.lenA + ' beats' : i === s.B.h1 ? s.lenB - 1 + ' · ' + s.lenB + ' beats' : '');
+    const arrOf = (i) => s.seq.find((x) => x.c + 2 === i);
+    const wAt = (i) => s.seq.find((x) => x.c === i);
+    const rowSpec = w
+      ? [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'AWVALID', kind: 'bit', color: C_AW, values: bit((i) => i === s.A.h1 || i === s.B.h1) },
+          { name: 'AWREADY', kind: 'bit', color: C_AW, values: bit((i) => i === s.A.h1 || i === s.B.h1) },
+          { name: 'AWID', kind: 'bus', color: AMBER, values: bus(idAt) },
+          { name: 'AWADDR', kind: 'bus', color: VIOLET, values: bus(addrAt) },
+          { name: 'AWLEN', kind: 'bus', color: VIOLET, values: bus(lenAt) },
+          { name: 'WVALID', kind: 'bit', color: C_W, values: bit((i) => !!wAt(i)) },
+          { name: 'WREADY', kind: 'bit', color: C_W, values: bit((i) => !!wAt(i)) },
+          { name: 'WDATA', kind: 'bus', color: VIOLET, values: bus((i) => { const x = wAt(i); return x ? this.hexAdd(WDATA, x.beat * 8) : ''; }) },
+          { name: 'WLAST', kind: 'bit', color: C_W, values: bit((i) => { const x = wAt(i); return x && x.last; }) },
+          { name: 'BVALID', kind: 'bit', color: C_B, values: bit((i) => i === s.resp[0] || i === s.resp[1]) },
+          { name: 'BID', kind: 'bus', color: AMBER, values: bus((i) => (i === s.resp[0] ? '0' : i === s.resp[1] ? '1' : '')) },
+          { name: 'BRESP', kind: 'bus', color: C_B, values: bus((i) => (i === s.resp[0] || i === s.resp[1] ? 'OKAY' : '')) },
+        ]
+      : [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'ARVALID', kind: 'bit', color: C_AR, values: bit((i) => i === s.A.h1 || i === s.B.h1) },
+          { name: 'ARREADY', kind: 'bit', color: C_AR, values: bit((i) => i === s.A.h1 || i === s.B.h1) },
+          { name: 'ARID', kind: 'bus', color: AMBER, values: bus(idAt) },
+          { name: 'ARADDR', kind: 'bus', color: VIOLET, values: bus(addrAt) },
+          { name: 'ARLEN', kind: 'bus', color: VIOLET, values: bus(lenAt) },
+          { name: 'RVALID', kind: 'bit', color: C_R, values: bit((i) => !!arrOf(i)) },
+          { name: 'RREADY', kind: 'bit', color: C_R, values: bit((i) => !!arrOf(i)) },
+          { name: 'RID', kind: 'bus', color: AMBER, values: bus((i) => { const x = arrOf(i); return x ? String(x.id) : ''; }) },
+          { name: 'RDATA', kind: 'bus', color: VIOLET, values: bus((i) => { const x = arrOf(i); return x ? this.hexAdd(x.id === 0 ? s.A.base : s.B.base, x.beat * 8) : ''; }) },
+          { name: 'RLAST', kind: 'bit', color: C_R, values: bit((i) => { const x = arrOf(i); return x && x.last; }) },
+        ];
+    const geo = this.waveGeom(rowSpec, cyc, t);
+
+    const phase = t === 0 ? 'IDLE'
+      : o.s1 && o.s1.kind === 'addr' ? (w ? 'AW ID' + o.s1.id : 'AR ID' + o.s1.id)
+      : o.s1 && o.s1.kind === 'data' ? 'W beat'
+      : b.s1 ? (w ? 'B BID ' + b.s1.id : 'R RID ' + b.s1.id)
+      : anyLive ? 'IN FLIGHT' : 'IDLE';
+
+    return {
+      cw: G.w, ch: G.h,
+      topoLabel: 'TOPOLOGY · TWO TRANSACTIONS IN FLIGHT · click a block',
+      canvasNote: 'One manager again, but two transactions at once: ID0 is a ' + s.lenA + '-beat burst into SRAM0 and ID1 a ' + s.lenB + '-beat burst into SRAM1. One address transfer describes a whole burst, and after that the data channel carries one beat per cycle.',
+      canvasNote2: 'The bundling of L3 is gone: the channels this transfer uses are back on their own wires, so you can watch the tag leave on ' + (w ? 'AW and come back on B' : 'AR and come back on R') + '. The label under each wire is the live ID \u2014 lime is ID0, crimson is ID1. Channels taking no part in this transfer are the one grey line below. Wire colour still means channel, never ID.',
+      nodes, outEdges: outE, backEdges: backE, edgeLabels: labels, pads,
+      crumbs: [
+        { label: 'CPU', color: AXI, active: !!(o.s1 || b.s1) },
+        { label: 'ASIB0', color: AXI, active: !!(o.s1 || o.s2 || b.s1 || b.s2) },
+        { label: 'ID0 · SRAM0', color: doneOf(0) ? C_B : AXI, active: !!(o.fan[0] || b.fan[0] || o.s3[0] || b.s3[0]) },
+        { label: 'ID1 · SRAM1', color: doneOf(1) ? C_B : AXI, active: !!(o.fan[1] || b.fan[1] || o.s3[1] || b.s3[1]) },
+      ],
+      statusLine: 'L4 · AXI4',
+      statusNote: (w ? 'WRITE' : 'READ') + ' ID0 ' + s.lenA + ' beats → SRAM0 · ID1 ' + s.lenB + ' beats → SRAM1' + (s.ooo ? (w ? ' · BID out of order' : ' · RID interleaved') : ' · in order'),
+      clock: { cycle: t, phase, running: st.running, onStep: this.tick, onRun: this.run, onReset: this.reset },
+      phaseLine: 'T' + t + ' · ' + phase,
+      decodeText: w
+        ? 'AXI4 has no WID, so write data may never interleave: all ' + s.lenA + ' beats of ID0 go out before the first beat of ID1. The responses are free — BID says which transaction each B belongs to, and ' + (s.ooo ? 'here ID1 is answered first even though its data went second.' : 'here they come back in issue order, which AXI permits but does not require.')
+        : 'Each read has its own ARID, and RID tags every returned beat. ' + (s.ooo
+          ? 'Interleaving is on: beats of ID0 and ID1 alternate on the read data channel, and only RID says which burst a beat belongs to. RLAST closes each burst separately.'
+          : 'Interleaving is off: ID0 delivers all ' + s.lenA + ' beats, then ID1 delivers its ' + s.lenB + '. Beats of one ID must stay in order — beats of different IDs need not.'),
+      waveScope: 'MANAGER PORT · ' + (w ? 'AW, W AND B \u00b7 EACH ON ITS OWN WIRE' : 'AR AND R \u00b7 EACH ON ITS OWN WIRE'),
+      waveRows: geo.waveRows, waveHdr: geo.waveHdr,
+      waveRev: (w ? 'WRITE' : 'READ') + ' · ' + s.lenA + ' + ' + s.lenB + ' BEATS · ' + (s.ooo ? 'OUT OF ORDER' : 'IN ORDER'),
+      showRegs: false, hasFlight: true,
+      flightRows: [0, 1].map((id) => {
+        const src = id === 0 ? s.A : s.B;
+        const got = gotOf(id), len = lenOf(id);
+        const col = !issued ? 'oklch(0.62 0.01 258)' : doneOf(id) ? C_B : got > 0 ? dataC : AXI;
+        return {
+          id: (w ? 'AWID' : 'ARID') + ' = ' + id, addr: src.addr, len: 'LEN ' + (len - 1) + ' · ' + len + ' beats · INCR',
+          color: col, idColor: idC(id),
+          border: issued && !doneOf(id)
+            ? 'color-mix(in oklch, ' + idC(id) + ' 38%, transparent)'
+            : doneOf(id) && issued ? 'color-mix(in oklch, oklch(0.80 0.15 155) 40%, transparent)' : 'oklch(0.26 0.011 258)',
+          state: !issued ? 'armed at the manager'
+            : w ? (s.resp[id] <= t ? 'complete · BRESP = OKAY' : got === len ? 'all beats sent · waiting for B' : got + ' of ' + len + ' beats sent')
+            : doneOf(id) ? 'complete · RLAST seen' : got + ' of ' + len + ' beats returned',
+        };
+      }),
+    };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const e = this.events();
+    const t = st.t;
+    const a = this.addr();
+    const w = st.mode === 'write';
+    const { L, R } = this.act(t);
+    const planned = st.level === 'L5';
+
+    const colOf = (m, c) => (m[c.id] === 'err' ? RED : m[c.id] === 'stall' ? AMBER : m[c.id] === 'on' ? c.color : DIM);
+    const payload = { aw: a, w: WDATA, b: 'OKAY', ar: a, r: this.rdata() };
+    const labOf = (m, c) => {
+      if (m[c.id] === 'err') return c.name + ' ' + (c.id === 'b' ? 'BRESP' : 'RRESP') + ' = DECERR';
+      if (m[c.id] === 'stall') return c.name + ' ' + c.name + 'READY = 0';
+      if (m[c.id] === 'on') return c.name + ' ' + payload[c.id];
+      return c.name;
+    };
+
+    const outEdges = [];
+    const backEdges = [];
+    const labels = [];
+    const pads = [];
+    CHANS.forEach((c) => {
+      const back = c.dir === 'back';
+      const bucket = back ? backEdges : outEdges;
+      const wire = (m, d) => {
+        const s = m[c.id];
+        bucket.push({
+          d,
+          sw: s ? 2.2 : 1.6,
+          stroke: s === 'err' ? RED : s === 'stall' ? AMBER : s === 'on' ? c.color : GREY,
+          dash: s ? '7 7' : 'none',
+          marker: 'url(#arw-' + (s === 'err' ? 'err' : s === 'stall' ? 'stall' : s === 'on' ? c.id : 'idle') + ')',
+        });
+      };
+      wire(L, back ? 'M' + NIC_L + ',' + c.y + ' H' + CPU_R : 'M' + CPU_R + ',' + c.y + ' H' + NIC_L);
+      wire(R, back ? 'M' + SRAM_L + ',' + c.y + ' H' + NIC_R : 'M' + NIC_R + ',' + c.y + ' H' + SRAM_L);
+      pads.push({ x: (back ? NIC_L : CPU_R) - 2.5, y: c.y - 3, fill: L[c.id] ? colOf(L, c) : GREY });
+      pads.push({ x: (back ? SRAM_L : NIC_R) - 2.5, y: c.y - 3, fill: R[c.id] ? colOf(R, c) : GREY });
+      labels.push({ x: 196, y: c.y - 15, label: labOf(L, c), color: colOf(L, c) });
+      labels.push({ x: 586, y: c.y - 15, label: labOf(R, c), color: colOf(R, c) });
+    });
+
+    const anyL = Object.keys(L).length > 0;
+    const anyR = Object.keys(R).length > 0;
+    const stalling = Object.keys(R).some((k) => R[k] === 'stall');
+    const done = w ? t === e.bM : t === e.rM;
+
+    const nodes = [
+      {
+        key: 'cpu', label: 'CPU', sub: 'Cortex-A class · AXI4 manager', range: 'ID width 4 · 64-bit data',
+        accent: AXI, width: 186, height: BLK_H, x: 0, y: BLK_Y, selected: st.sel === 'cpu',
+        state: (w ? 'WRITE' : 'READ') + ' ' + a, stateColor: anyL ? AXI : 'oklch(0.58 0.008 258)',
+        onClick: () => this.setState({ sel: 'cpu' }),
+        controls: [
+          { label: 'READ', on: !w, color: C_AR, onClick: () => this.patch({ mode: 'read', sel: 'cpu' }) },
+          { label: 'WRITE', on: w, color: C_AW, onClick: () => this.patch({ mode: 'write', sel: 'cpu' }) },
+        ],
+      },
+      {
+        key: 'nic400', label: 'NIC-400', sub: 'CoreLink AXI interconnect', range: '1 ASIB → 1 AMIB · mux, not packets',
+        accent: AXI, width: 216, height: BLK_H, x: NIC_L, y: BLK_Y, selected: st.sel === 'nic400',
+        state: e.bad && anyL ? 'no region match · DECERR' : anyL || anyR ? 'ASIB0 → AMIB0' : 'no channel active',
+        stateColor: e.bad && anyL ? RED : anyL || anyR ? AXI : 'oklch(0.58 0.008 258)',
+        onClick: () => this.setState({ sel: 'nic400' }), controls: [],
+      },
+      {
+        key: 'sram0', label: 'SRAM0', sub: 'DMC-style controller · AXI4 subordinate', range: '0x8000_0000 – 0x8FFF_FFFF',
+        accent: AXI, width: 190, height: BLK_H, x: SRAM_L, y: BLK_Y, selected: st.sel === 'sram0',
+        state: e.bad ? 'not addressed'
+          : stalling ? (w ? 'AWREADY = 0' : 'ARREADY = 0')
+          : R.b ? 'BVALID · BRESP = OKAY'
+          : R.r ? 'RVALID · RLAST = 1'
+          : R.aw ? 'AWREADY = 1'
+          : R.w ? 'WREADY = 1'
+          : R.ar ? 'ARREADY = 1' : '',
+        stateColor: e.bad ? 'oklch(0.58 0.008 258)' : stalling ? AMBER : R.b ? C_B : R.r ? C_R : R.w ? C_W : R.aw ? C_AW : C_AR,
+        onClick: () => this.setState({ sel: 'sram0' }),
+        controls: e.bad ? [] : [{ label: 'STALL 1 CLK', on: st.stall, color: AMBER, onClick: () => this.patch({ stall: !st.stall, sel: 'sram0' }) }],
+      },
+    ];
+
+    const live = CHANS.filter((c) => L[c.id] || R[c.id]).map((c) => c.name);
+    const phase = live.length ? live.join(' · ') : 'IDLE';
+
+    const cyc = e.period;
+    const bit = (f) => Array.from({ length: cyc }, (_, i) => (f(i) ? 1 : 0));
+    const bus = (f) => Array.from({ length: cyc }, (_, i) => f(i) || '');
+    const rowSpec = w
+      ? [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'AWVALID', kind: 'bit', color: C_AW, values: bit((i) => i === e.awM) },
+          { name: 'AWREADY', kind: 'bit', color: C_AW, values: bit((i) => i === e.awM) },
+          { name: 'AWADDR', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.awM ? a : '')) },
+          { name: 'AWVALID · AMIB0', kind: 'bit', color: C_AW, values: bit((i) => i > e.awM && i <= e.awS) },
+          { name: 'AWREADY · AMIB0', kind: 'bit', color: e.s ? AMBER : C_AW, values: bit((i) => i === e.awS) },
+          { name: 'AWADDR · AMIB0', kind: 'bus', color: VIOLET, values: bus((i) => (i > e.awM && i <= e.awS ? a : '')) },
+          { name: 'WVALID', kind: 'bit', color: C_W, values: bit((i) => i === e.wM) },
+          { name: 'WREADY', kind: 'bit', color: C_W, values: bit((i) => i === e.wM) },
+          { name: 'WLAST', kind: 'bit', color: C_W, values: bit((i) => i === e.wM) },
+          { name: 'WDATA', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.wM ? WDATA : '')) },
+          { name: 'BVALID', kind: 'bit', color: C_B, values: bit((i) => i === e.bM) },
+          { name: 'BREADY', kind: 'bit', color: C_B, values: bit((i) => i === e.bM) },
+          { name: 'BRESP', kind: 'bus', color: e.bad ? RED : C_B, values: bus((i) => (i === e.bM ? (e.bad ? 'DECERR' : 'OKAY') : '')) },
+        ]
+      : [
+          { name: 'ACLK', kind: 'clk' },
+          { name: 'ARVALID', kind: 'bit', color: C_AR, values: bit((i) => i === e.arM) },
+          { name: 'ARREADY', kind: 'bit', color: C_AR, values: bit((i) => i === e.arM) },
+          { name: 'ARADDR', kind: 'bus', color: VIOLET, values: bus((i) => (i === e.arM ? a : '')) },
+          { name: 'ARVALID · AMIB0', kind: 'bit', color: C_AR, values: bit((i) => i > e.arM && i <= e.arS) },
+          { name: 'ARREADY · AMIB0', kind: 'bit', color: e.s ? AMBER : C_AR, values: bit((i) => i === e.arS) },
+          { name: 'ARADDR · AMIB0', kind: 'bus', color: VIOLET, values: bus((i) => (i > e.arM && i <= e.arS ? a : '')) },
+          { name: 'RVALID', kind: 'bit', color: C_R, values: bit((i) => i === e.rM) },
+          { name: 'RREADY', kind: 'bit', color: C_R, values: bit((i) => i === e.rM) },
+          { name: 'RLAST', kind: 'bit', color: C_R, values: bit((i) => i === e.rM) },
+          { name: 'RDATA', kind: 'bus', color: e.bad ? RED : VIOLET, values: bus((i) => (i === e.rM ? (e.bad ? 'undefined' : this.rdata()) : '')) },
+          { name: 'RRESP', kind: 'bus', color: e.bad ? RED : C_R, values: bus((i) => (i === e.rM ? (e.bad ? 'DECERR' : 'OKAY') : '')) },
+        ];
+
+    const { waveRows, waveHdr } = this.waveGeom(rowSpec, cyc, t);
+
+    const info = INFO[st.sel] || INFO.nic400;
+
+    const base = {
+      isNetwork: st.view === 'network', isReference: st.view === 'reference', isRoadmap: st.view === 'roadmap',
+      views: [
+        { id: 'network', label: 'Network', color: AXI },
+        { id: 'reference', label: 'Reference', color: VIOLET },
+        { id: 'roadmap', label: 'Roadmap', color: AMBER },
+      ],
+      view: st.view, onView: (id) => this.setState({ view: id }),
+      levels: LEVELS, level: st.level,
+      onLevel: (id) => this.patch({
+        level: id,
+        sel: id === 'L2' ? 'splitter' : id === 'L3' ? 'amib0' : id === 'L4' ? 'asib0' : 'nic400',
+        target: id === 'L1' && (REGS.find((x) => x.id === st.target) || {}).at ? 'a0' : st.target,
+      }),
+      levelTitle: TITLES[st.level], levelNote: NOTES[st.level],
+      levelLabel: st.level + ' · ' + (LEVELS.find((x) => x.id === st.level) || LEVELS[0]).name,
+      levelAccent: planned ? AMBER : AXI,
+      isPlanned: planned,
+      plannedNote: st.level + ' is not built yet — see Roadmap in the rail. The model below still runs L1.',
+      crumbs: [
+        { label: 'CPU', color: AXI, active: anyL },
+        { label: 'NIC-400', color: AXI, active: anyL || anyR },
+        { label: e.bad ? 'no region' : 'SRAM0', color: e.bad ? RED : done ? C_B : AXI, active: e.bad ? done : anyR },
+      ],
+      statusLine: 'L1 · AXI4',
+      statusNote: (w ? 'WRITE ' : 'READ ') + a + (e.bad ? ' → no region · DECERR' : ' → SRAM0'),
+      clock: { cycle: t, phase, running: st.running, onStep: this.tick, onRun: this.run, onReset: this.reset },
+      phaseLine: 'T' + t + ' · ' + phase + (e.s ? ' · stall armed' : ''),
+      cw: 940, ch: 232,
+      topoLabel: 'TOPOLOGY · click a block',
+      canvasNote: 'One ASIB in, one AMIB out. Every channel has its own wires end to end — nothing is packetised, nothing is stored and forwarded. L2 opens the interconnect up.',
+      waveScope: 'MANAGER PORT AND AMIB0',
+      nodes, outEdges, backEdges, edgeLabels: labels, pads,
+      selName: info.name, selSub: info.sub, selProse: info.prose, selRules: info.rules,
+      selPorts: PORTS[st.sel] || [],
+      regs: REGS, target: st.target, onTarget: (id) => this.patch({ target: id }),
+      regRows: REGS.filter((r) => !r.at || st.level !== 'L1').map((r) => ({
+        ...r,
+        valueColor: r.valueColor || VIOLET,
+        bg: r.id === st.target ? 'color-mix(in oklch, oklch(0.62 0.19 235) 12%, oklch(0.20 0.011 258))' : 'oklch(0.20 0.011 258)',
+        border: r.id === st.target ? 'color-mix(in oklch, oklch(0.62 0.19 235) 40%, transparent)' : 'oklch(0.26 0.011 258)',
+        onClick: () => this.patch({ target: r.id }),
+      })),
+      decodeText: !anyL && !anyR
+        ? 'Bus idle. No channel has VALID high, so the decoder has nothing to match.'
+        : e.bad
+        ? (w ? 'AWADDR ' : 'ARADDR ') + a + ' matches no region — SRAM0 covers 0x8000_0000 – 0x8FFF_FFFF and there is no other. The NIC-400 answers in its place with DECERR, because AXI gives a manager no way to withdraw a transfer it has already issued.'
+        : (w ? 'AWADDR ' : 'ARADDR ') + a + ' matches SRAM0 (0x8000_0000 – 0x8FFF_FFFF), so the NIC-400 decoder drives the transfer to AMIB0. One AMIB, so there is no arbitration and no default subordinate yet.',
+      hasWho: false, whoChips: [], showRegs: true, hasFlight: false, flightRows: [], canvasNote2: '',
+      trace: st.trace.length ? st.trace : [this.traceFor(0)],
+      showWave: this.props.showWaveform !== false,
+      waveRows, waveHdr, waveRev: (w ? 'WRITE · SINGLE BEAT' : 'READ · SINGLE BEAT') + (e.bad ? ' · DECERR' : ''),
+      roadmap: ROADMAP, refSignals: REF_SIGNALS, refBlocks: REF_BLOCKS,
+    };
+    if (st.level === 'L2') return Object.assign(base, this.sceneL2());
+    if (st.level === 'L3') return Object.assign(base, this.sceneL3());
+    if (st.level === 'L4') return Object.assign(base, this.sceneL4());
+    return base;
+  }
+}
+</script>
+</body>
+</html>
