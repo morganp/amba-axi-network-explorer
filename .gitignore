@@ -5,3 +5,9 @@
 
 # Local-only for now
 CLAUDE.md
+
+# Runtime pulled from the Claude Design project for local preview only.
+# The host site section supplies these, so they must not ship from here.
+public/support.js
+public/ds-base.js
+public/_ds/
