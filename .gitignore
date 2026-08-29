@@ -6,8 +6,9 @@
 # Local-only for now
 CLAUDE.md
 
-# Runtime pulled from the Claude Design project for local preview only.
-# The host site section supplies these, so they must not ship from here.
+# Claude Design source + runtime, pulled from the design project.
+# Only the bundled public/ProtocolExplorer.html is committed.
+public/ProtocolExplorer.dc.html
 public/support.js
 public/ds-base.js
 public/_ds/
